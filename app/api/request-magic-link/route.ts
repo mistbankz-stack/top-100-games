@@ -19,6 +19,16 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function getRedirectTo() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (!siteUrl) {
+    throw new Error("NEXT_PUBLIC_SITE_URL is not set.");
+  }
+
+  return `${siteUrl.replace(/\/$/, "")}/auth/callback`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -83,10 +93,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const redirectTo =
-      process.env.NODE_ENV === "production"
-        ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
-        : "http://localhost:3000/auth/callback";
+    const redirectTo = getRedirectTo();
 
     const { error: signInError, data: signInData } =
       await supabasePublic.auth.signInWithOtp({
@@ -96,7 +103,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-    console.log("signInWithOtp result:", { signInData, signInError });
+    console.log("signInWithOtp result:", { signInData, signInError, redirectTo });
 
     if (signInError) {
       console.error("Failed to send magic link:", signInError);
