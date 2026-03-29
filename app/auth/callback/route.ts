@@ -1,19 +1,33 @@
 import { createClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+function getSiteUrl() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-  const code = searchParams.get("code");
-
-  if (code) {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    await supabase.auth.exchangeCodeForSession(code);
+  if (!siteUrl) {
+    throw new Error("NEXT_PUBLIC_SITE_URL is not set.");
   }
 
-  return NextResponse.redirect("http://localhost:3000/vote");
+  return siteUrl.replace(/\/$/, "");
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      console.error("Failed to exchange auth code for session:", error);
+      return NextResponse.redirect(`${getSiteUrl()}/auth`);
+    }
+  }
+
+  return NextResponse.redirect(`${getSiteUrl()}/vote`);
 }
