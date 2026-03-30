@@ -82,7 +82,7 @@ function isLikelyBaseGame(game: IgdbGame) {
     return false;
   }
 
-  // Strong bundle filter (safe)
+  // Bundle filter (safe)
   if (title.includes(" + ")) {
     return false;
   }
@@ -92,10 +92,8 @@ function isLikelyBaseGame(game: IgdbGame) {
     return false;
   }
 
-  // IGDB structural filter
-  if (game.parent_game || game.version_parent) {
-    return false;
-  }
+  // ❌ REMOVED overly aggressive filter:
+  // if (game.parent_game || game.version_parent) return false;
 
   return true;
 }
@@ -107,25 +105,20 @@ function scoreGame(game: SearchResultGame, searchQuery: string) {
 
   let score = 0;
 
-  // Strong relevance boosts
   if (title === query) score += 1000;
   if (title.startsWith(query)) score += 300;
   if (title.includes(query)) score += 100;
 
-  // Prefer entries with platform data
   if (game.platforms) score += game.platforms.length;
 
-  // Prefer major/mainstream platforms
   if (platforms.includes("playstation")) score += 20;
   if (platforms.includes("xbox")) score += 20;
   if (platforms.includes("pc")) score += 20;
   if (platforms.includes("windows")) score += 10;
   if (platforms.includes("switch")) score += 10;
 
-  // Prefer broader releases
   if ((game.platforms || "").includes(",")) score += 15;
 
-  // De-prioritize likely secondary/odd ports
   if (platforms.includes("nintendo ds")) score -= 15;
   if (platforms.includes("legacy mobile")) score -= 20;
   if (platforms.includes("mobile")) score -= 10;
@@ -218,7 +211,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Client-ID": clientId,
-        "Authorization": `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "text/plain",
       },
       body: `
@@ -235,10 +228,8 @@ export async function POST(req: NextRequest) {
 
     const games = (await igdbResponse.json()) as IgdbGame[];
 
-    // Step 1: remove likely DLC / passes / editions / add-ons
     const filteredGames = games.filter(isLikelyBaseGame);
 
-    // Step 2: format
     const formattedGames: SearchResultGame[] = filteredGames.map((game) => ({
       igdb_id: game.id,
       title: game.name,
@@ -253,10 +244,7 @@ export async function POST(req: NextRequest) {
         : null,
     }));
 
-    // Step 3: collapse exact duplicate titles
     const dedupedGames = dedupeByTitle(formattedGames, safeQuery);
-
-    // Step 4: sort by best match
     const sortedGames = sortByRelevance(dedupedGames, safeQuery);
 
     return NextResponse.json({ games: sortedGames });
