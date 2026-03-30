@@ -348,6 +348,25 @@ export default function VotePage() {
           Vote for Your Top 10 Games
         </h1>
 
+        {!statusLoading && voterEmail && (
+  <div
+    style={{
+      marginBottom: 16,
+      padding: "12px 14px",
+      borderRadius: 10,
+      background: "#151515",
+      border: "1px solid #222",
+      color: "#bbb",
+      fontSize: "0.95rem",
+    }}
+  >
+    Voting as:{" "}
+    <span style={{ color: "white", fontWeight: 600 }}>
+      {voterEmail}
+    </span>
+  </div>
+)}
+
         <p style={{ color: "#aaa", marginBottom: 30 }}>
           Search for a game, then click it to add it to the next open ranking slot.
         </p>
