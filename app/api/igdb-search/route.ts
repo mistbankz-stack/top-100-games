@@ -21,11 +21,13 @@ type SearchResultGame = {
   platforms: string | null;
 };
 
+type SearchMode = "clean" | "expanded";
+
 function normalizeTitle(title: string) {
   return title.trim().toLowerCase();
 }
 
-function isLikelyBaseGame(game: IgdbGame) {
+function isCleanBaseGame(game: IgdbGame) {
   const title = game.name.toLowerCase().trim();
 
   const blockedPhrases = [
@@ -82,18 +84,56 @@ function isLikelyBaseGame(game: IgdbGame) {
     return false;
   }
 
-  // Bundle filter (safe)
   if (title.includes(" + ")) {
     return false;
   }
 
-  // Catch "2 in 1", "3 in 1", etc.
   if (/\b\d+\s+in\s+1\b/.test(title)) {
     return false;
   }
 
-  // ❌ REMOVED overly aggressive filter:
-  // if (game.parent_game || game.version_parent) return false;
+  if (game.parent_game || game.version_parent) {
+    return false;
+  }
+
+  return true;
+}
+
+function isExpandedBaseGame(game: IgdbGame) {
+  const title = game.name.toLowerCase().trim();
+
+  const blockedPhrases = [
+    "friend's pass",
+    "friends pass",
+    "season pass",
+    "soundtrack",
+    "bundle",
+    "demo",
+    "beta",
+    "trial",
+    "test server",
+    "public test",
+    "pts",
+    "mod",
+    "hack",
+    "fangame",
+    "fan game",
+    "prototype",
+    "sample",
+    "tech demo",
+  ];
+
+  if (blockedPhrases.some((phrase) => title.includes(phrase))) {
+    return false;
+  }
+
+  if (title.includes(" + ")) {
+    return false;
+  }
+
+  if (/\b\d+\s+in\s+1\b/.test(title)) {
+    return false;
+  }
 
   return true;
 }
@@ -108,6 +148,9 @@ function scoreGame(game: SearchResultGame, searchQuery: string) {
   if (title === query) score += 1000;
   if (title.startsWith(query)) score += 300;
   if (title.includes(query)) score += 100;
+
+  if (title !== query && title.includes(query + ":")) score -= 40;
+  if (title !== query && title.includes(query + " ")) score -= 20;
 
   if (game.platforms) score += game.platforms.length;
 
@@ -194,7 +237,7 @@ async function getTwitchAccessToken() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { query } = await req.json();
+    const { query, mode } = await req.json();
 
     if (!query || typeof query !== "string" || query.trim().length < 2) {
       return NextResponse.json(
@@ -203,21 +246,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const searchMode: SearchMode = mode === "expanded" ? "expanded" : "clean";
     const safeQuery = query.replace(/"/g, "").trim();
+
     const accessToken = await getTwitchAccessToken();
     const clientId = process.env.TWITCH_CLIENT_ID!;
+
+    const limit = searchMode === "expanded" ? 40 : 20;
 
     const igdbResponse = await fetch("https://api.igdb.com/v4/games", {
       method: "POST",
       headers: {
         "Client-ID": clientId,
-        Authorization: `Bearer ${accessToken}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "text/plain",
       },
       body: `
         search "${safeQuery}";
         fields name, category, version_parent, parent_game, first_release_date, cover.url, platforms.name;
-        limit 20;
+        limit ${limit};
       `,
     });
 
@@ -228,7 +275,9 @@ export async function POST(req: NextRequest) {
 
     const games = (await igdbResponse.json()) as IgdbGame[];
 
-    const filteredGames = games.filter(isLikelyBaseGame);
+    const filteredGames = games.filter(
+      searchMode === "expanded" ? isExpandedBaseGame : isCleanBaseGame
+    );
 
     const formattedGames: SearchResultGame[] = filteredGames.map((game) => ({
       igdb_id: game.id,

@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 type Game = {
@@ -34,6 +35,8 @@ type IgdbSearchGame = {
   release_year: number | null;
   platforms: string | null;
 };
+
+type SearchMode = "clean" | "expanded";
 
 const TOTAL_GAMES = 10;
 const DRAFT_STORAGE_KEY = "top-100-games-ballot-draft";
@@ -95,10 +98,7 @@ function moveFilledGame(
   const [moved] = updated.splice(fromIndex, 1);
   updated.splice(toIndex, 0, moved);
 
-  return [
-    ...updated,
-    ...Array(TOTAL_GAMES - updated.length).fill(null),
-  ];
+  return [...updated, ...Array(TOTAL_GAMES - updated.length).fill(null)];
 }
 
 type SortableBallotItemProps = {
@@ -140,7 +140,7 @@ function SortableBallotItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.8 : 1,
+    opacity: isDragging ? 0.82 : 1,
     touchAction: "none" as const,
   };
 
@@ -152,12 +152,12 @@ function SortableBallotItem({
         display: "flex",
         gap: 12,
         alignItems: "center",
-        background: "#151515",
+        background: "rgba(18,18,18,0.92)",
         padding: 14,
-        borderRadius: 12,
-        border: "1px solid #222",
+        borderRadius: 16,
+        border: "1px solid rgba(255,255,255,0.07)",
         minHeight: 118,
-        boxShadow: isDragging ? "0 8px 30px rgba(0,0,0,0.35)" : "none",
+        boxShadow: isDragging ? "0 14px 36px rgba(0,0,0,0.36)" : "none",
       }}
     >
       <div
@@ -195,7 +195,7 @@ function SortableBallotItem({
           width: 68,
           height: 88,
           objectFit: "cover",
-          borderRadius: 8,
+          borderRadius: 10,
           background: "#222",
           flexShrink: 0,
         }}
@@ -247,7 +247,7 @@ function SortableBallotItem({
           style={{
             width: 36,
             height: 36,
-            borderRadius: 8,
+            borderRadius: 10,
             border: "none",
             background: "#2a2a2a",
             color: "white",
@@ -269,7 +269,7 @@ function SortableBallotItem({
           style={{
             width: 36,
             height: 36,
-            borderRadius: 8,
+            borderRadius: 10,
             border: "none",
             background: "#2a2a2a",
             color: "white",
@@ -291,7 +291,7 @@ function SortableBallotItem({
           style={{
             width: 36,
             height: 36,
-            borderRadius: 8,
+            borderRadius: 10,
             border: "none",
             background: "#2a2a2a",
             color: "white",
@@ -317,7 +317,7 @@ function SortableBallotItem({
           style={{
             width: 36,
             height: 36,
-            borderRadius: 8,
+            borderRadius: 10,
             border: "none",
             background: "#3a1717",
             color: "white",
@@ -327,7 +327,7 @@ function SortableBallotItem({
             opacity: interactionsLocked ? 0.7 : 1,
           }}
         >
-          X
+          ×
         </button>
       </div>
     </div>
@@ -372,6 +372,11 @@ export default function VotePage() {
   const [submitMessage, setSubmitMessage] = useState("");
   const [hasVoted, setHasVoted] = useState(false);
   const [voterEmail, setVoterEmail] = useState<string | null>(null);
+
+  const [lastSearchMode, setLastSearchMode] = useState<SearchMode>("clean");
+  const [hasTriedCleanFallback, setHasTriedCleanFallback] = useState(false);
+  const [hasTriedExpandedFallback, setHasTriedExpandedFallback] = useState(false);
+  const [fallbackModeUsed, setFallbackModeUsed] = useState<SearchMode | null>(null);
 
   const isBallotComplete = useMemo(
     () => selectedGames.every((game) => game !== null),
@@ -531,6 +536,14 @@ export default function VotePage() {
     setSubmitMessage("");
   }
 
+  function resetFallbackState() {
+    setFallbackResults([]);
+    setHasTriedCleanFallback(false);
+    setHasTriedExpandedFallback(false);
+    setFallbackModeUsed(null);
+    setLastSearchMode("clean");
+  }
+
   function addGameToRanking(game: Game, options?: { imported?: boolean }) {
     if (hasVoted) return;
 
@@ -569,6 +582,7 @@ export default function VotePage() {
     setResults([]);
     setFallbackResults([]);
     setHighlightedResultIndex(0);
+    resetFallbackState();
   }
 
   function removeGame(index: number) {
@@ -623,9 +637,7 @@ export default function VotePage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Clear your entire Top 10 and start over?"
-    );
+    const confirmed = window.confirm("Clear your entire Top 10 and start over?");
 
     if (!confirmed) return;
 
@@ -635,6 +647,7 @@ export default function VotePage() {
     setFallbackResults([]);
     setHighlightedResultIndex(0);
     clearMessages();
+    resetFallbackState();
     setSubmitMessage("Your ballot has been cleared.");
   }
 
@@ -652,6 +665,7 @@ export default function VotePage() {
       setFallbackResults([]);
       setHighlightedResultIndex(0);
       clearMessages();
+      resetFallbackState();
       return;
     }
 
@@ -680,13 +694,15 @@ export default function VotePage() {
     }
   }
 
-  async function searchFullDatabase() {
+  async function searchFullDatabase(mode: SearchMode = "clean") {
     if (hasVoted) return;
     if (query.trim().length < 2) return;
 
     setFallbackLoading(true);
     clearMessages();
     setFallbackResults([]);
+    setLastSearchMode(mode);
+    setFallbackModeUsed(mode);
 
     try {
       const response = await fetch("/api/igdb-search", {
@@ -694,7 +710,7 @@ export default function VotePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, mode }),
       });
 
       const data = await response.json();
@@ -704,13 +720,29 @@ export default function VotePage() {
         return;
       }
 
-      if (!data.games || data.games.length === 0) {
-        setErrorMessage("No matches found in the full database.");
+      if (mode === "clean") {
+        setHasTriedCleanFallback(true);
+      } else {
+        setHasTriedExpandedFallback(true);
+      }
+
+      const games = Array.isArray(data.games) ? data.games : [];
+      setFallbackResults(games);
+
+      if (games.length === 0) {
+        setErrorMessage(
+          mode === "expanded"
+            ? "No matches found, even with the broader search."
+            : "No strong matches found. You can try a broader search."
+        );
         return;
       }
 
-      setFallbackResults(data.games);
-      setSubmitMessage("Select the best match from the full database below.");
+      setSubmitMessage(
+        mode === "expanded"
+          ? "Showing broader search results. Pick the closest match below."
+          : "Showing deeper search results. Pick the best match below."
+      );
     } catch (error) {
       console.error("Fallback search error:", error);
       setErrorMessage("Something went wrong searching the full database.");
@@ -750,6 +782,7 @@ export default function VotePage() {
       setFallbackResults([]);
       setQuery("");
       setResults([]);
+      resetFallbackState();
     } catch (error) {
       console.error("Import error:", error);
       setErrorMessage("Something went wrong importing the selected game.");
@@ -815,6 +848,7 @@ export default function VotePage() {
       setResults([]);
       setFallbackResults([]);
       setQuery("");
+      resetFallbackState();
     } catch (error) {
       console.error("Submit vote error:", error);
       setErrorMessage("Something went wrong submitting your vote.");
@@ -865,87 +899,138 @@ export default function VotePage() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#0a0a0a",
+        background: "#050505",
         color: "white",
-        padding: isMobileLayout ? 18 : 30,
+        padding: isMobileLayout ? 16 : 26,
       }}
     >
-      <div style={{ maxWidth: 1150, margin: "0 auto" }}>
-        <h1
+      <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+        <header
           style={{
-            fontSize: isMobileLayout ? "2rem" : "2.5rem",
-            fontWeight: "bold",
-            marginBottom: 10,
-            lineHeight: 1.1,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 14,
+            flexWrap: "wrap",
+            marginBottom: 22,
           }}
         >
-          Vote for Your Top 10 Games
-        </h1>
-
-        {!statusLoading && voterEmail && (
-          <div
+          <Link
+            href="/"
             style={{
-              marginBottom: 16,
-              padding: "12px 14px",
-              borderRadius: 10,
-              background: "#151515",
-              border: "1px solid #222",
-              color: "#bbb",
-              fontSize: "0.95rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12,
-              flexWrap: "wrap",
+              color: "white",
+              textDecoration: "none",
+              fontWeight: 800,
+              letterSpacing: "0.04em",
             }}
           >
-            <div>
-              Voting as:{" "}
-              <span style={{ color: "white", fontWeight: 600 }}>
-                {voterEmail}
-              </span>
-            </div>
+            vote100games.com
+          </Link>
 
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={signOutLoading}
+          {!statusLoading && voterEmail && (
+            <div
               style={{
-                padding: "8px 12px",
-                borderRadius: 8,
-                border: "1px solid #333",
-                background: "#0f0f0f",
-                color: "white",
-                cursor: signOutLoading ? "not-allowed" : "pointer",
-                opacity: signOutLoading ? 0.7 : 1,
-                fontWeight: 600,
+                padding: "12px 14px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "#bbb",
+                fontSize: "0.95rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+                backdropFilter: "blur(12px)",
               }}
             >
-              {signOutLoading ? "Signing out..." : "Sign out"}
-            </button>
-          </div>
-        )}
+              <div>
+                Voting as:{" "}
+                <span style={{ color: "white", fontWeight: 700 }}>
+                  {voterEmail}
+                </span>
+              </div>
 
-        <p
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signOutLoading}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: "1px solid #333",
+                  background: "#0f0f0f",
+                  color: "white",
+                  cursor: signOutLoading ? "not-allowed" : "pointer",
+                  opacity: signOutLoading ? 0.7 : 1,
+                  fontWeight: 700,
+                }}
+              >
+                {signOutLoading ? "Signing out..." : "Sign out"}
+              </button>
+            </div>
+          )}
+        </header>
+
+        <div
           style={{
-            color: "#aaa",
-            marginBottom: 18,
-            lineHeight: 1.5,
-            fontSize: isMobileLayout ? "0.95rem" : "1rem",
+            marginBottom: 22,
+            padding: isMobileLayout ? 20 : 26,
+            borderRadius: 24,
+            background:
+              "linear-gradient(180deg, rgba(20,20,20,0.92) 0%, rgba(12,12,12,0.92) 100%)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.32)",
           }}
         >
-          Search for a game, then click it to add it to the next open ranking slot.
-          You can use arrow keys + Enter for local results, and drag games to reorder
-          your Top 10.
-        </p>
+          <div
+            style={{
+              display: "inline-flex",
+              padding: "7px 12px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "#d0d0d0",
+              fontSize: "0.84rem",
+              marginBottom: 14,
+            }}
+          >
+            Build your ballot
+          </div>
+
+          <h1
+            style={{
+              fontSize: isMobileLayout ? "2.15rem" : "3.2rem",
+              fontWeight: 900,
+              margin: 0,
+              lineHeight: 1.02,
+              letterSpacing: "-0.04em",
+            }}
+          >
+            Vote for Your Top 10 Games
+          </h1>
+
+          <p
+            style={{
+              color: "#acacac",
+              margin: "14px 0 0 0",
+              lineHeight: 1.65,
+              fontSize: isMobileLayout ? "1rem" : "1.05rem",
+              maxWidth: 760,
+            }}
+          >
+            Search your favorite games, rank them in order, and help shape the
+            community&apos;s Top 100 list.
+          </p>
+        </div>
 
         <div
           style={{
             marginBottom: 24,
-            padding: 16,
-            borderRadius: 12,
-            background: "#121212",
-            border: "1px solid #222",
+            padding: 18,
+            borderRadius: 18,
+            background: "rgba(18,18,18,0.88)",
+            border: "1px solid rgba(255,255,255,0.07)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -970,12 +1055,12 @@ export default function VotePage() {
               onClick={jumpToBallot}
               style={{
                 padding: "10px 14px",
-                borderRadius: 8,
+                borderRadius: 12,
                 border: "1px solid #333",
                 background: "#0f0f0f",
                 color: "white",
                 cursor: "pointer",
-                fontWeight: 600,
+                fontWeight: 700,
               }}
             >
               Jump to My Top 10
@@ -987,13 +1072,13 @@ export default function VotePage() {
               disabled={interactionsLocked}
               style={{
                 padding: "10px 14px",
-                borderRadius: 8,
+                borderRadius: 12,
                 border: "1px solid #333",
                 background: "#0f0f0f",
                 color: "white",
                 cursor: interactionsLocked ? "not-allowed" : "pointer",
                 opacity: interactionsLocked ? 0.7 : 1,
-                fontWeight: 600,
+                fontWeight: 700,
               }}
             >
               Clear All
@@ -1012,7 +1097,7 @@ export default function VotePage() {
               border: "1px solid #1f5d1f",
               color: "#b8ffb8",
               padding: "16px 18px",
-              borderRadius: 10,
+              borderRadius: 14,
               marginBottom: 20,
               lineHeight: 1.5,
             }}
@@ -1033,7 +1118,7 @@ export default function VotePage() {
               background: "#2a1111",
               border: "1px solid #5b2222",
               padding: "12px 14px",
-              borderRadius: 10,
+              borderRadius: 14,
               marginBottom: 16,
               lineHeight: 1.5,
             }}
@@ -1049,7 +1134,7 @@ export default function VotePage() {
               background: "#132a13",
               border: "1px solid #1f5d1f",
               padding: "12px 14px",
-              borderRadius: 10,
+              borderRadius: 14,
               marginBottom: 16,
               lineHeight: 1.5,
             }}
@@ -1063,30 +1148,69 @@ export default function VotePage() {
             display: "grid",
             gridTemplateColumns: isMobileLayout
               ? "1fr"
-              : "minmax(0, 1.1fr) minmax(320px, 0.9fr)",
+              : "minmax(0, 1.02fr) minmax(360px, 0.98fr)",
             gap: 24,
             alignItems: "start",
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <input
-              type="text"
-              placeholder="Search for a game..."
-              value={query}
-              disabled={interactionsLocked}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
+            <div
               style={{
-                width: "100%",
-                padding: "14px",
-                fontSize: "16px",
-                borderRadius: 8,
-                border: "1px solid #333",
-                marginBottom: 20,
-                background: interactionsLocked ? "#0d0d0d" : "#111",
-                color: "white",
+                background: "rgba(14,14,14,0.9)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 18,
+                padding: 16,
+                marginBottom: 16,
               }}
-            />
+            >
+              <div
+                style={{
+                  color: "#f3f3f3",
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                  marginBottom: 8,
+                }}
+              >
+                Search database
+              </div>
+              <div
+                style={{
+                  color: "#9e9e9e",
+                  fontSize: "0.94rem",
+                  lineHeight: 1.55,
+                  marginBottom: 12,
+                }}
+              >
+                Search by title, then add games to the next open slot in your ballot.
+              </div>
+
+              <input
+                type="text"
+                placeholder="Search for a game..."
+                value={query}
+                disabled={interactionsLocked}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setFallbackResults([]);
+                  setHasTriedCleanFallback(false);
+                  setHasTriedExpandedFallback(false);
+                  setFallbackModeUsed(null);
+                  setLastSearchMode("clean");
+                  setErrorMessage("");
+                  setSubmitMessage("");
+                }}
+                onKeyDown={handleSearchKeyDown}
+                style={{
+                  width: "100%",
+                  padding: "14px 15px",
+                  fontSize: "16px",
+                  borderRadius: 12,
+                  border: "1px solid #333",
+                  background: interactionsLocked ? "#0d0d0d" : "#111",
+                  color: "white",
+                }}
+              />
+            </div>
 
             {loading && <p style={{ color: "#aaa" }}>Searching...</p>}
 
@@ -1095,7 +1219,7 @@ export default function VotePage() {
                 style={{
                   display: "grid",
                   gap: 14,
-                  marginTop: 20,
+                  marginTop: 8,
                   marginBottom: 24,
                 }}
               >
@@ -1110,17 +1234,20 @@ export default function VotePage() {
                       gap: 14,
                       alignItems: "center",
                       background:
-                        index === highlightedResultIndex ? "#1e1e1e" : "#151515",
+                        index === highlightedResultIndex
+                          ? "rgba(32,32,32,0.95)"
+                          : "rgba(18,18,18,0.9)",
                       padding: 14,
-                      borderRadius: 12,
+                      borderRadius: 16,
                       border:
                         index === highlightedResultIndex
-                          ? "1px solid #5a5a5a"
-                          : "1px solid #222",
+                          ? "1px solid #5b5b5b"
+                          : "1px solid rgba(255,255,255,0.07)",
                       cursor: interactionsLocked ? "not-allowed" : "pointer",
                       textAlign: "left",
                       color: "white",
                       opacity: interactionsLocked ? 0.7 : 1,
+                      transition: "transform 0.16s ease, border-color 0.16s ease",
                     }}
                   >
                     <img
@@ -1130,7 +1257,7 @@ export default function VotePage() {
                         width: isMobileLayout ? 64 : 72,
                         height: isMobileLayout ? 84 : 92,
                         objectFit: "cover",
-                        borderRadius: 8,
+                        borderRadius: 10,
                         background: "#222",
                         flexShrink: 0,
                       }}
@@ -1176,6 +1303,7 @@ export default function VotePage() {
                           color: "#999",
                           fontSize: "0.9rem",
                           flexShrink: 0,
+                          fontWeight: 700,
                         }}
                       >
                         Enter
@@ -1187,41 +1315,83 @@ export default function VotePage() {
             )}
 
             {!loading && query.trim().length >= 2 && !hasVoted && (
-              <div style={{ marginTop: 20, marginBottom: 30 }}>
-                {results.length === 0 ? (
-                  <p style={{ color: "#aaa", marginBottom: 10 }}>
-                    No local matches found. Try the full database.
-                  </p>
-                ) : (
-                  <p style={{ color: "#aaa", marginBottom: 10 }}>
-                    Don&apos;t see the right game? Search the full database.
-                  </p>
+              <div
+                style={{
+                  marginTop: 20,
+                  marginBottom: 30,
+                  padding: 16,
+                  borderRadius: 16,
+                  background: "rgba(14,14,14,0.9)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                }}
+              >
+                {!hasTriedCleanFallback && (
+                  <>
+                    <p style={{ color: "#aaa", margin: 0, marginBottom: 12, lineHeight: 1.55 }}>
+                      {results.length === 0
+                        ? "No local matches found. Try a deeper search."
+                        : "Still don&apos;t see it? Search deeper."}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => searchFullDatabase("clean")}
+                      disabled={fallbackLoading || interactionsLocked}
+                      style={{
+                        padding: "11px 16px",
+                        borderRadius: 12,
+                        border: "none",
+                        background: "white",
+                        color: "black",
+                        cursor:
+                          fallbackLoading || interactionsLocked
+                            ? "not-allowed"
+                            : "pointer",
+                        fontWeight: 800,
+                        opacity: fallbackLoading || interactionsLocked ? 0.7 : 1,
+                      }}
+                    >
+                      {fallbackLoading && lastSearchMode === "clean"
+                        ? "Searching deeper..."
+                        : "Still don’t see it? Search deeper"}
+                    </button>
+                  </>
                 )}
 
-                <button
-                  type="button"
-                  onClick={searchFullDatabase}
-                  disabled={fallbackLoading || interactionsLocked}
-                  style={{
-                    padding: "10px 16px",
-                    borderRadius: 8,
-                    border: "none",
-                    background: "white",
-                    color: "black",
-                    cursor:
-                      fallbackLoading || interactionsLocked ? "not-allowed" : "pointer",
-                    fontWeight: "bold",
-                    opacity: fallbackLoading || interactionsLocked ? 0.7 : 1,
-                  }}
-                >
-                  {fallbackLoading
-                    ? "Searching full database..."
-                    : "Search full database"}
-                </button>
+                {hasTriedCleanFallback && !hasTriedExpandedFallback && (
+                  <div>
+                    <p style={{ color: "#aaa", margin: 0, marginBottom: 12, lineHeight: 1.55 }}>
+                      Still not finding the right one? Try a broader search.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => searchFullDatabase("expanded")}
+                      disabled={fallbackLoading || interactionsLocked}
+                      style={{
+                        padding: "11px 16px",
+                        borderRadius: 12,
+                        border: "1px solid #333",
+                        background: "#151515",
+                        color: "white",
+                        cursor:
+                          fallbackLoading || interactionsLocked
+                            ? "not-allowed"
+                            : "pointer",
+                        fontWeight: 800,
+                        opacity: fallbackLoading || interactionsLocked ? 0.7 : 1,
+                      }}
+                    >
+                      {fallbackLoading && lastSearchMode === "expanded"
+                        ? "Trying broader search..."
+                        : "Try broader search"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            {fallbackResults.length > 0 && !hasVoted && (
+            {hasTriedCleanFallback && !hasVoted && fallbackResults.length > 0 && (
               <div
                 style={{
                   display: "grid",
@@ -1231,7 +1401,9 @@ export default function VotePage() {
                 }}
               >
                 <p style={{ color: "#aaa", margin: 0 }}>
-                  Select the best match from the full database:
+                  {fallbackModeUsed === "expanded"
+                    ? "Select the best match from the broader search:"
+                    : "Select the best match from the deeper search:"}
                 </p>
 
                 {fallbackResults.map((game) => (
@@ -1244,10 +1416,10 @@ export default function VotePage() {
                       display: "flex",
                       gap: 14,
                       alignItems: "center",
-                      background: "#151515",
+                      background: "rgba(18,18,18,0.9)",
                       padding: 14,
-                      borderRadius: 12,
-                      border: "1px solid #222",
+                      borderRadius: 16,
+                      border: "1px solid rgba(255,255,255,0.07)",
                       cursor:
                         importLoadingId === game.igdb_id || interactionsLocked
                           ? "not-allowed"
@@ -1255,7 +1427,9 @@ export default function VotePage() {
                       textAlign: "left",
                       color: "white",
                       opacity:
-                        importLoadingId === game.igdb_id || interactionsLocked ? 0.7 : 1,
+                        importLoadingId === game.igdb_id || interactionsLocked
+                          ? 0.7
+                          : 1,
                     }}
                   >
                     <img
@@ -1265,7 +1439,7 @@ export default function VotePage() {
                         width: isMobileLayout ? 64 : 72,
                         height: isMobileLayout ? 84 : 92,
                         objectFit: "cover",
-                        borderRadius: 8,
+                        borderRadius: 10,
                         background: "#222",
                         flexShrink: 0,
                       }}
@@ -1321,7 +1495,7 @@ export default function VotePage() {
                   style={{
                     width: "100%",
                     padding: "14px 16px",
-                    borderRadius: 10,
+                    borderRadius: 12,
                     border: "1px solid #333",
                     background: "#0f0f0f",
                     color: "white",
@@ -1346,7 +1520,7 @@ export default function VotePage() {
             <div
               style={{
                 marginBottom: 12,
-                fontSize: "1.15rem",
+                fontSize: "1.25rem",
                 fontWeight: "bold",
               }}
             >
@@ -1361,7 +1535,7 @@ export default function VotePage() {
                 lineHeight: 1.5,
               }}
             >
-              Drag to reorder, or use the arrow buttons. Higher ranks are worth more points.
+              Drag to reorder or use the arrow buttons. Higher ranks are worth more points.
             </div>
 
             <DndContext
@@ -1386,10 +1560,10 @@ export default function VotePage() {
                             display: "flex",
                             gap: 12,
                             alignItems: "center",
-                            background: "#101010",
+                            background: "rgba(14,14,14,0.9)",
                             padding: 14,
-                            borderRadius: 12,
-                            border: "1px solid #222",
+                            borderRadius: 16,
+                            border: "1px solid rgba(255,255,255,0.07)",
                             minHeight: 118,
                           }}
                         >
@@ -1452,7 +1626,7 @@ export default function VotePage() {
                 style={{
                   width: "100%",
                   padding: "16px",
-                  borderRadius: 10,
+                  borderRadius: 14,
                   border: "none",
                   background: "#ffffff",
                   color: "#000000",
@@ -1461,6 +1635,7 @@ export default function VotePage() {
                   cursor:
                     submissionLoading || statusLoading ? "not-allowed" : "pointer",
                   opacity: submissionLoading || statusLoading ? 0.7 : 1,
+                  boxShadow: "0 10px 26px rgba(255,255,255,0.08)",
                 }}
               >
                 {submissionLoading ? "Submitting vote..." : "Submit Vote"}
