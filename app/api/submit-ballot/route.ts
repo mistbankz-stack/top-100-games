@@ -5,6 +5,8 @@ type SubmitBallotPayload = {
   gameIds: number[];
 };
 
+const TOTAL_GAMES = 10;
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -44,43 +46,141 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (body.gameIds.length !== 10) {
+    if (body.gameIds.length !== TOTAL_GAMES) {
       return NextResponse.json(
-        { error: "You must submit exactly 10 ranked games." },
+        { error: `You must submit exactly ${TOTAL_GAMES} ranked games.` },
         { status: 400 }
       );
     }
 
-    const uniqueIds = new Set(body.gameIds);
-    if (uniqueIds.size !== 10) {
+    const normalizedGameIds = body.gameIds.map((id) => Number(id));
+
+    const hasInvalidIds = normalizedGameIds.some(
+      (id) => !Number.isInteger(id) || id <= 0
+    );
+
+    if (hasInvalidIds) {
+      return NextResponse.json(
+        { error: "All gameIds must be valid positive integers." },
+        { status: 400 }
+      );
+    }
+
+    const uniqueIds = new Set(normalizedGameIds);
+
+    if (uniqueIds.size !== TOTAL_GAMES) {
       return NextResponse.json(
         { error: "Your ballot must contain 10 unique games." },
         { status: 400 }
       );
     }
 
-    const { data, error } = await supabase.rpc("submit_ballot", {
-      p_voter_email: user.email,
-      p_game_ids: body.gameIds,
-    });
+    const voterEmail = user.email.trim().toLowerCase();
 
-    if (error) {
-      const message = error.message || "Failed to submit ballot.";
+    const { data: existingBallot, error: existingBallotError } = await supabase
+      .from("ballots")
+      .select("id")
+      .eq("voter_email", voterEmail)
+      .maybeSingle();
 
-      if (message.toLowerCase().includes("already submitted")) {
+    if (existingBallotError) {
+      console.error("Existing ballot check error:", existingBallotError);
+
+      return NextResponse.json(
+        { error: "Failed to check for an existing ballot." },
+        { status: 500 }
+      );
+    }
+
+    if (existingBallot) {
+      return NextResponse.json(
+        { error: "This email has already submitted a ballot." },
+        { status: 409 }
+      );
+    }
+
+    const { data: games, error: gamesError } = await supabase
+      .from("games")
+      .select("id, title")
+      .in("id", normalizedGameIds);
+
+    if (gamesError) {
+      console.error("Games lookup error:", gamesError);
+
+      return NextResponse.json(
+        { error: "Failed to look up selected games." },
+        { status: 500 }
+      );
+    }
+
+    if (!games || games.length !== TOTAL_GAMES) {
+      return NextResponse.json(
+        { error: "One or more selected games could not be found." },
+        { status: 400 }
+      );
+    }
+
+    const titleById = new Map<number, string>();
+
+    for (const game of games) {
+      titleById.set(game.id, game.title);
+    }
+
+    const rankedTitles = normalizedGameIds.map((id) => titleById.get(id));
+
+    if (rankedTitles.some((title) => !title)) {
+      return NextResponse.json(
+        { error: "Could not resolve every selected game to a title." },
+        { status: 400 }
+      );
+    }
+
+    const insertPayload = {
+      voter_email: voterEmail,
+      rank_1_name: rankedTitles[0]!,
+      rank_2_name: rankedTitles[1]!,
+      rank_3_name: rankedTitles[2]!,
+      rank_4_name: rankedTitles[3]!,
+      rank_5_name: rankedTitles[4]!,
+      rank_6_name: rankedTitles[5]!,
+      rank_7_name: rankedTitles[6]!,
+      rank_8_name: rankedTitles[7]!,
+      rank_9_name: rankedTitles[8]!,
+      rank_10_name: rankedTitles[9]!,
+    };
+
+    const { data: insertedBallot, error: insertError } = await supabase
+      .from("ballots")
+      .insert(insertPayload)
+      .select("id, voter_email")
+      .single();
+
+    if (insertError) {
+      console.error("Ballot insert error:", insertError);
+
+      const message = insertError.message?.toLowerCase() ?? "";
+
+      if (
+        message.includes("duplicate") ||
+        message.includes("unique") ||
+        message.includes("ballots_voter_email_unique_idx")
+      ) {
         return NextResponse.json(
           { error: "This email has already submitted a ballot." },
           { status: 409 }
         );
       }
 
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: "Failed to submit ballot." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      ballotId: data,
-      voterEmail: user.email,
+      ballotId: insertedBallot.id,
+      voterEmail: insertedBallot.voter_email,
     });
   } catch (error) {
     console.error("Submit ballot error:", error);
