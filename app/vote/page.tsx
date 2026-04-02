@@ -110,6 +110,7 @@ type SortableBallotItemProps = {
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
   onRemove: (index: number) => void;
+  isMobileLayout: boolean;
 };
 
 function SortableBallotItem({
@@ -121,6 +122,7 @@ function SortableBallotItem({
   onMoveUp,
   onMoveDown,
   onRemove,
+  isMobileLayout,
 }: SortableBallotItemProps) {
   const {
     attributes,
@@ -153,24 +155,24 @@ function SortableBallotItem({
         gap: 12,
         alignItems: "center",
         background: "rgba(18,18,18,0.92)",
-        padding: 14,
-        borderRadius: 16,
+        padding: isMobileLayout ? 12 : 14,
+        borderRadius: 18,
         border: "1px solid rgba(255,255,255,0.07)",
-        minHeight: 118,
+        minHeight: isMobileLayout ? 108 : 118,
         boxShadow: isDragging ? "0 14px 36px rgba(0,0,0,0.36)" : "none",
       }}
     >
       <div
         style={{
-          width: 56,
+          width: isMobileLayout ? 50 : 56,
           textAlign: "center",
           flexShrink: 0,
         }}
       >
         <div
           style={{
-            fontSize: "1.2rem",
-            fontWeight: "bold",
+            fontSize: isMobileLayout ? "1.05rem" : "1.2rem",
+            fontWeight: 900,
             color: "white",
             lineHeight: 1,
           }}
@@ -180,7 +182,7 @@ function SortableBallotItem({
         <div
           style={{
             color: "#8f8f8f",
-            fontSize: "0.8rem",
+            fontSize: "0.78rem",
             marginTop: 6,
           }}
         >
@@ -192,8 +194,8 @@ function SortableBallotItem({
         src={getGameImage(game.cover_url)}
         alt={game.title}
         style={{
-          width: 68,
-          height: 88,
+          width: isMobileLayout ? 58 : 68,
+          height: isMobileLayout ? 78 : 88,
           objectFit: "cover",
           borderRadius: 10,
           background: "#222",
@@ -204,8 +206,8 @@ function SortableBallotItem({
       <div style={{ flex: 1, minWidth: 0 }}>
         <h2
           style={{
-            fontSize: "1rem",
-            fontWeight: "bold",
+            fontSize: isMobileLayout ? "0.96rem" : "1rem",
+            fontWeight: 800,
             margin: 0,
             lineHeight: 1.2,
           }}
@@ -213,7 +215,7 @@ function SortableBallotItem({
           {game.title}
         </h2>
 
-        <p style={{ color: "#aaa", margin: "6px 0 0 0", fontSize: "0.92rem" }}>
+        <p style={{ color: "#aaa", margin: "6px 0 0 0", fontSize: "0.9rem" }}>
           Year: {game.release_year ?? "Unknown"}
         </p>
 
@@ -221,7 +223,7 @@ function SortableBallotItem({
           style={{
             color: "#777",
             margin: "6px 0 0 0",
-            fontSize: "0.88rem",
+            fontSize: "0.84rem",
             lineHeight: 1.3,
           }}
         >
@@ -252,7 +254,7 @@ function SortableBallotItem({
             background: "#2a2a2a",
             color: "white",
             fontSize: "1rem",
-            fontWeight: "bold",
+            fontWeight: 900,
             cursor: interactionsLocked ? "not-allowed" : "grab",
             opacity: interactionsLocked ? 0.5 : 1,
           }}
@@ -274,7 +276,7 @@ function SortableBallotItem({
             background: "#2a2a2a",
             color: "white",
             fontSize: "1rem",
-            fontWeight: "bold",
+            fontWeight: 900,
             cursor: interactionsLocked || index === 0 ? "not-allowed" : "pointer",
             opacity: interactionsLocked || index === 0 ? 0.5 : 1,
           }}
@@ -296,7 +298,7 @@ function SortableBallotItem({
             background: "#2a2a2a",
             color: "white",
             fontSize: "1rem",
-            fontWeight: "bold",
+            fontWeight: 900,
             cursor:
               interactionsLocked || index === selectedCount - 1
                 ? "not-allowed"
@@ -322,7 +324,7 @@ function SortableBallotItem({
             background: "#3a1717",
             color: "white",
             fontSize: "1rem",
-            fontWeight: "bold",
+            fontWeight: 900,
             cursor: interactionsLocked ? "not-allowed" : "pointer",
             opacity: interactionsLocked ? 0.7 : 1,
           }}
@@ -901,10 +903,10 @@ export default function VotePage() {
         minHeight: "100vh",
         background: "#050505",
         color: "white",
-        padding: isMobileLayout ? 16 : 26,
+        padding: isMobileLayout ? 14 : 26,
       }}
     >
-      <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <header
           style={{
             display: "flex",
@@ -915,17 +917,29 @@ export default function VotePage() {
             marginBottom: 22,
           }}
         >
-          <Link
-            href="/"
-            style={{
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 800,
-              letterSpacing: "0.04em",
-            }}
-          >
-            vote100games.com
-          </Link>
+          <div>
+            <Link
+              href="/"
+              style={{
+                color: "white",
+                textDecoration: "none",
+                fontWeight: 900,
+                letterSpacing: "0.05em",
+              }}
+            >
+              vote100games.com
+            </Link>
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: "0.82rem",
+                color: "#7f7f7f",
+                fontWeight: 600,
+              }}
+            >
+              by Bandit Banks
+            </div>
+          </div>
 
           {!statusLoading && voterEmail && (
             <div
@@ -942,11 +956,12 @@ export default function VotePage() {
                 gap: 12,
                 flexWrap: "wrap",
                 backdropFilter: "blur(12px)",
+                width: isMobileLayout ? "100%" : "auto",
               }}
             >
               <div>
                 Voting as:{" "}
-                <span style={{ color: "white", fontWeight: 700 }}>
+                <span style={{ color: "white", fontWeight: 800 }}>
                   {voterEmail}
                 </span>
               </div>
@@ -975,8 +990,8 @@ export default function VotePage() {
         <div
           style={{
             marginBottom: 22,
-            padding: isMobileLayout ? 20 : 26,
-            borderRadius: 24,
+            padding: isMobileLayout ? 18 : 28,
+            borderRadius: 26,
             background:
               "linear-gradient(180deg, rgba(20,20,20,0.92) 0%, rgba(12,12,12,0.92) 100%)",
             border: "1px solid rgba(255,255,255,0.07)",
@@ -1000,11 +1015,11 @@ export default function VotePage() {
 
           <h1
             style={{
-              fontSize: isMobileLayout ? "2.15rem" : "3.2rem",
+              fontSize: isMobileLayout ? "2.05rem" : "3.25rem",
               fontWeight: 900,
               margin: 0,
               lineHeight: 1.02,
-              letterSpacing: "-0.04em",
+              letterSpacing: "-0.05em",
             }}
           >
             Vote for Your Top 10 Games
@@ -1014,13 +1029,14 @@ export default function VotePage() {
             style={{
               color: "#acacac",
               margin: "14px 0 0 0",
-              lineHeight: 1.65,
-              fontSize: isMobileLayout ? "1rem" : "1.05rem",
-              maxWidth: 760,
+              lineHeight: 1.68,
+              fontSize: isMobileLayout ? "0.98rem" : "1.05rem",
+              maxWidth: 780,
             }}
           >
-            Search your favorite games, rank them in order, and help shape the
-            community&apos;s Top 100 list.
+            This is the ballot that will help decide the final Top 100 for my
+            upcoming video. Search your favorite games, rank them carefully, and
+            lock in the list you want representing your all-time picks.
           </p>
         </div>
 
@@ -1028,7 +1044,7 @@ export default function VotePage() {
           style={{
             marginBottom: 24,
             padding: 18,
-            borderRadius: 18,
+            borderRadius: 20,
             background: "rgba(18,18,18,0.88)",
             border: "1px solid rgba(255,255,255,0.07)",
             display: "flex",
@@ -1039,7 +1055,7 @@ export default function VotePage() {
           }}
         >
           <div>
-            <div style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: 4 }}>
+            <div style={{ fontSize: "1rem", fontWeight: 800, marginBottom: 4 }}>
               Ballot Progress: {selectedCount} / {TOTAL_GAMES}
             </div>
             <div style={{ color: "#999", fontSize: "0.95rem" }}>
@@ -1049,7 +1065,14 @@ export default function VotePage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              width: isMobileLayout ? "100%" : "auto",
+            }}
+          >
             <button
               type="button"
               onClick={jumpToBallot}
@@ -1061,6 +1084,7 @@ export default function VotePage() {
                 color: "white",
                 cursor: "pointer",
                 fontWeight: 700,
+                width: isMobileLayout ? "100%" : "auto",
               }}
             >
               Jump to My Top 10
@@ -1079,6 +1103,7 @@ export default function VotePage() {
                 cursor: interactionsLocked ? "not-allowed" : "pointer",
                 opacity: interactionsLocked ? 0.7 : 1,
                 fontWeight: 700,
+                width: isMobileLayout ? "100%" : "auto",
               }}
             >
               Clear All
@@ -1102,7 +1127,7 @@ export default function VotePage() {
               lineHeight: 1.5,
             }}
           >
-            <div style={{ fontWeight: "bold", marginBottom: 6 }}>Vote submitted</div>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>Vote submitted</div>
             <div>
               {voterEmail
                 ? `A ballot has already been submitted for ${voterEmail}.`
@@ -1148,7 +1173,7 @@ export default function VotePage() {
             display: "grid",
             gridTemplateColumns: isMobileLayout
               ? "1fr"
-              : "minmax(0, 1.02fr) minmax(360px, 0.98fr)",
+              : "minmax(0, 1.06fr) minmax(360px, 0.94fr)",
             gap: 24,
             alignItems: "start",
           }}
@@ -1158,7 +1183,7 @@ export default function VotePage() {
               style={{
                 background: "rgba(14,14,14,0.9)",
                 border: "1px solid rgba(255,255,255,0.07)",
-                borderRadius: 18,
+                borderRadius: 20,
                 padding: 16,
                 marginBottom: 16,
               }}
@@ -1182,6 +1207,7 @@ export default function VotePage() {
                 }}
               >
                 Search by title, then add games to the next open slot in your ballot.
+                If something is missing, you can pull it in from the wider IGDB database.
               </div>
 
               <input
@@ -1238,7 +1264,7 @@ export default function VotePage() {
                           ? "rgba(32,32,32,0.95)"
                           : "rgba(18,18,18,0.9)",
                       padding: 14,
-                      borderRadius: 16,
+                      borderRadius: 18,
                       border:
                         index === highlightedResultIndex
                           ? "1px solid #5b5b5b"
@@ -1267,7 +1293,7 @@ export default function VotePage() {
                       <h2
                         style={{
                           fontSize: "1rem",
-                          fontWeight: "bold",
+                          fontWeight: 800,
                           margin: 0,
                           lineHeight: 1.2,
                         }}
@@ -1320,7 +1346,7 @@ export default function VotePage() {
                   marginTop: 20,
                   marginBottom: 30,
                   padding: 16,
-                  borderRadius: 16,
+                  borderRadius: 18,
                   background: "rgba(14,14,14,0.9)",
                   border: "1px solid rgba(255,255,255,0.07)",
                 }}
@@ -1418,7 +1444,7 @@ export default function VotePage() {
                       alignItems: "center",
                       background: "rgba(18,18,18,0.9)",
                       padding: 14,
-                      borderRadius: 16,
+                      borderRadius: 18,
                       border: "1px solid rgba(255,255,255,0.07)",
                       cursor:
                         importLoadingId === game.igdb_id || interactionsLocked
@@ -1449,7 +1475,7 @@ export default function VotePage() {
                       <h2
                         style={{
                           fontSize: "1rem",
-                          fontWeight: "bold",
+                          fontWeight: 800,
                           margin: 0,
                           lineHeight: 1.2,
                         }}
@@ -1479,7 +1505,7 @@ export default function VotePage() {
                       </p>
                     </div>
 
-                    <div style={{ fontWeight: "bold", flexShrink: 0 }}>
+                    <div style={{ fontWeight: 800, flexShrink: 0 }}>
                       {importLoadingId === game.igdb_id ? "Adding..." : "Select"}
                     </div>
                   </button>
@@ -1500,7 +1526,7 @@ export default function VotePage() {
                     background: "#0f0f0f",
                     color: "white",
                     cursor: "pointer",
-                    fontWeight: "bold",
+                    fontWeight: 800,
                   }}
                 >
                   Jump to My Top 10
@@ -1519,23 +1545,33 @@ export default function VotePage() {
           >
             <div
               style={{
-                marginBottom: 12,
-                fontSize: "1.25rem",
-                fontWeight: "bold",
-              }}
-            >
-              My Top 10
-            </div>
-
-            <div
-              style={{
-                color: "#999",
-                fontSize: "0.92rem",
+                padding: 18,
+                borderRadius: 20,
+                background: "rgba(14,14,14,0.92)",
+                border: "1px solid rgba(255,255,255,0.07)",
                 marginBottom: 14,
-                lineHeight: 1.5,
               }}
             >
-              Drag to reorder or use the arrow buttons. Higher ranks are worth more points.
+              <div
+                style={{
+                  marginBottom: 6,
+                  fontSize: "1.3rem",
+                  fontWeight: 900,
+                }}
+              >
+                My Top 10
+              </div>
+
+              <div
+                style={{
+                  color: "#999",
+                  fontSize: "0.92rem",
+                  lineHeight: 1.56,
+                }}
+              >
+                Drag to reorder or use the arrow buttons. Higher ranks are worth
+                more points, so your order matters.
+              </div>
             </div>
 
             <DndContext
@@ -1547,7 +1583,7 @@ export default function VotePage() {
                 items={sortableIds}
                 strategy={verticalListSortingStrategy}
               >
-                <div style={{ display: "grid", gap: 14, marginBottom: 30 }}>
+                <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
                   {selectedGames.map((game, index) => {
                     if (!game) {
                       const rank = index + 1;
@@ -1561,23 +1597,23 @@ export default function VotePage() {
                             gap: 12,
                             alignItems: "center",
                             background: "rgba(14,14,14,0.9)",
-                            padding: 14,
-                            borderRadius: 16,
+                            padding: isMobileLayout ? 12 : 14,
+                            borderRadius: 18,
                             border: "1px solid rgba(255,255,255,0.07)",
-                            minHeight: 118,
+                            minHeight: isMobileLayout ? 108 : 118,
                           }}
                         >
                           <div
                             style={{
-                              width: 56,
+                              width: isMobileLayout ? 50 : 56,
                               textAlign: "center",
                               flexShrink: 0,
                             }}
                           >
                             <div
                               style={{
-                                fontSize: "1.2rem",
-                                fontWeight: "bold",
+                                fontSize: isMobileLayout ? "1.05rem" : "1.2rem",
+                                fontWeight: 900,
                                 color: "white",
                                 lineHeight: 1,
                               }}
@@ -1587,7 +1623,7 @@ export default function VotePage() {
                             <div
                               style={{
                                 color: "#8f8f8f",
-                                fontSize: "0.8rem",
+                                fontSize: "0.78rem",
                                 marginTop: 6,
                               }}
                             >
@@ -1595,7 +1631,9 @@ export default function VotePage() {
                             </div>
                           </div>
 
-                          <div style={{ color: "#666" }}>Empty slot</div>
+                          <div style={{ color: "#666", fontSize: "0.95rem" }}>
+                            Empty slot
+                          </div>
                         </div>
                       );
                     }
@@ -1611,6 +1649,7 @@ export default function VotePage() {
                         onMoveUp={(i) => moveGame(i, "up")}
                         onMoveDown={(i) => moveGame(i, "down")}
                         onRemove={removeGame}
+                        isMobileLayout={isMobileLayout}
                       />
                     );
                   })}
@@ -1631,7 +1670,7 @@ export default function VotePage() {
                   background: "#ffffff",
                   color: "#000000",
                   fontSize: "1rem",
-                  fontWeight: "bold",
+                  fontWeight: 900,
                   cursor:
                     submissionLoading || statusLoading ? "not-allowed" : "pointer",
                   opacity: submissionLoading || statusLoading ? 0.7 : 1,
@@ -1641,6 +1680,18 @@ export default function VotePage() {
                 {submissionLoading ? "Submitting vote..." : "Submit Vote"}
               </button>
             )}
+
+            <div
+              style={{
+                marginTop: 18,
+                color: "#666",
+                fontSize: "0.82rem",
+                lineHeight: 1.55,
+                textAlign: isMobileLayout ? "center" : "left",
+              }}
+            >
+              Game data provided by IGDB.
+            </div>
           </div>
         </div>
       </div>

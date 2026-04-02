@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s | Vote 100 Games",
   },
   description:
-    "Vote for the top 100 video games of all time. Submit your personal Top 10 and help shape the final list.",
+    "Vote for your Top 10 games of all time and help Bandit Banks build the internet's Top 100 Games list.",
   applicationName: "Vote 100 Games",
   keywords: [
     "Vote 100 Games",
@@ -31,6 +31,7 @@ export const metadata: Metadata = {
     "greatest games of all time",
     "video game voting",
     "top 10 games",
+    "Bandit Banks",
   ],
   authors: [{ name: "Bandit Banks" }],
   creator: "Bandit Banks",
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Vote 100 Games",
     description:
-      "Vote for the top 100 video games of all time. Submit your Top 10 and help decide the final ranking.",
+      "Bandit Banks is building a Top 100 Games list where the internet decides. Submit your Top 10 and help shape the final video.",
     url: "https://vote100games.com",
     siteName: "Vote 100 Games",
     type: "website",
@@ -50,7 +51,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Vote 100 Games",
     description:
-      "Submit your Top 10 games of all time and help build the internet's Top 100 Games list.",
+      "Submit your Top 10 games and help Bandit Banks build the internet's Top 100 Games list.",
   },
   robots: {
     index: true,

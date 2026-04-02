@@ -19,6 +19,12 @@ function shuffleArray<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
 
+const BULLETS = [
+  "One vote per email",
+  "No password needed",
+  "Your ballot shapes the final Top 100",
+];
+
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,7 +50,7 @@ export default function AuthPage() {
           .from("games")
           .select("id, title, cover_url")
           .not("cover_url", "is", null)
-          .limit(40);
+          .limit(50);
 
         if (error) {
           console.error("Failed to load auth background games:", error.message);
@@ -146,7 +152,7 @@ export default function AuthPage() {
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to bottom, rgba(5,5,5,0.95) 0%, rgba(5,5,5,0.78) 32%, rgba(5,5,5,0.78) 68%, rgba(5,5,5,0.95) 100%)",
+                "radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0) 48%)",
               zIndex: 2,
             }}
           />
@@ -155,7 +161,16 @@ export default function AuthPage() {
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to right, rgba(5,5,5,0.96) 0%, rgba(5,5,5,0.42) 18%, rgba(5,5,5,0.42) 82%, rgba(5,5,5,0.96) 100%)",
+                "linear-gradient(to bottom, rgba(5,5,5,0.84) 0%, rgba(5,5,5,0.58) 32%, rgba(5,5,5,0.58) 68%, rgba(5,5,5,0.84) 100%)",
+              zIndex: 2,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to right, rgba(5,5,5,0.92) 0%, rgba(5,5,5,0.32) 18%, rgba(5,5,5,0.32) 82%, rgba(5,5,5,0.92) 100%)",
               zIndex: 2,
             }}
           />
@@ -170,7 +185,7 @@ export default function AuthPage() {
                 justifyContent: "center",
                 gap: isMobile ? 16 : 24,
                 transform: isMobile ? "rotate(-6deg) scale(1.2)" : "rotate(-6deg) scale(1.08)",
-                opacity: isMobile ? 0.13 : 0.18,
+                opacity: isMobile ? 0.24 : 0.32,
                 zIndex: 1,
               }}
             >
@@ -277,17 +292,29 @@ export default function AuthPage() {
               flexWrap: "wrap",
             }}
           >
-            <Link
-              href="/"
-              style={{
-                color: "white",
-                textDecoration: "none",
-                fontWeight: 800,
-                letterSpacing: "0.04em",
-              }}
-            >
-              vote100games.com
-            </Link>
+            <div>
+              <Link
+                href="/"
+                style={{
+                  color: "white",
+                  textDecoration: "none",
+                  fontWeight: 900,
+                  letterSpacing: "0.05em",
+                }}
+              >
+                vote100games.com
+              </Link>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: "0.82rem",
+                  color: "#7f7f7f",
+                  fontWeight: 600,
+                }}
+              >
+                by Bandit Banks
+              </div>
+            </div>
 
             <Link
               href="/"
@@ -314,10 +341,10 @@ export default function AuthPage() {
             <div
               style={{
                 width: "100%",
-                maxWidth: 1060,
+                maxWidth: 1080,
                 display: "grid",
                 gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 430px",
-                gap: isMobile ? 26 : 34,
+                gap: isMobile ? 26 : 36,
                 alignItems: "center",
               }}
             >
@@ -345,11 +372,11 @@ export default function AuthPage() {
                 <h1
                   style={{
                     margin: 0,
-                    fontSize: "clamp(2.6rem, 5vw, 4.4rem)",
-                    lineHeight: 1.04,
+                    fontSize: "clamp(2.8rem, 5vw, 4.5rem)",
+                    lineHeight: 1.03,
                     fontWeight: 900,
-                    letterSpacing: "-0.04em",
-                    maxWidth: 540,
+                    letterSpacing: "-0.05em",
+                    maxWidth: 560,
                   }}
                 >
                   Sign in and
@@ -362,15 +389,49 @@ export default function AuthPage() {
                 <p
                   style={{
                     marginTop: 20,
-                    maxWidth: 520,
+                    maxWidth: 540,
                     color: "#b0b0b0",
                     fontSize: "1.05rem",
-                    lineHeight: 1.7,
+                    lineHeight: 1.72,
                   }}
                 >
-                  We&apos;ll send you a secure magic link so you can vote without
-                  creating a password. Fast, simple, and one step away from your ballot.
+                  This whole project exists because I wanted a Top 100 Games list
+                  decided by the internet, not a handful of people. Sign in, cast
+                  your ballot, and help shape the final Bandit Banks video reveal.
                 </p>
+
+                <div
+                  style={{
+                    marginTop: 22,
+                    display: "grid",
+                    gap: 10,
+                    maxWidth: 460,
+                  }}
+                >
+                  {BULLETS.map((item) => (
+                    <div
+                      key={item}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        color: "#d6d6d6",
+                        fontSize: "0.98rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "white",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div
@@ -417,12 +478,12 @@ export default function AuthPage() {
                   style={{
                     color: "#aaaaaa",
                     marginBottom: 22,
-                    lineHeight: 1.6,
+                    lineHeight: 1.62,
                     fontSize: "0.98rem",
                   }}
                 >
-                  Enter your email and we&apos;ll send you a secure sign-in link so
-                  you can submit your Top 10 games.
+                  Enter your email and I&apos;ll send you a secure sign-in link so
+                  you can submit your Top 10. One vote per email.
                 </p>
 
                 <form onSubmit={handleSubmit}>
@@ -457,9 +518,19 @@ export default function AuthPage() {
                       background: "white",
                       color: "black",
                       fontSize: "16px",
-                      fontWeight: 800,
+                      fontWeight: 900,
                       cursor: loading ? "not-allowed" : "pointer",
                       opacity: loading ? 0.7 : 1,
+                      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                      boxShadow: "0 10px 30px rgba(255,255,255,0.08)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-1px) scale(1.01)";
+                      e.currentTarget.style.boxShadow = "0 16px 36px rgba(255,255,255,0.12)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0) scale(1)";
+                      e.currentTarget.style.boxShadow = "0 10px 30px rgba(255,255,255,0.08)";
                     }}
                   >
                     {loading ? "Sending..." : "Send magic link"}
@@ -506,11 +577,24 @@ export default function AuthPage() {
                     lineHeight: 1.55,
                   }}
                 >
-                  One email. One ballot. No password needed.
+                  Check your inbox carefully — and your spam folder if needed.
                 </div>
               </div>
             </div>
           </section>
+
+          <footer
+            style={{
+              maxWidth: 1100,
+              width: "100%",
+              margin: "0 auto",
+              color: "#666",
+              fontSize: "0.82rem",
+              paddingTop: 8,
+            }}
+          >
+            Game data provided by IGDB.
+          </footer>
         </div>
       </main>
     </>
