@@ -11,6 +11,8 @@ const supabasePublic = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+const MAGIC_LINK_COOLDOWN_MINUTES = 60;
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -27,6 +29,12 @@ function getRedirectTo() {
   }
 
   return `${siteUrl.replace(/\/$/, "")}/auth/callback`;
+}
+
+function getMinutesSince(dateString: string) {
+  const then = new Date(dateString).getTime();
+  const now = Date.now();
+  return (now - then) / (1000 * 60);
 }
 
 export async function POST(request: NextRequest) {
@@ -66,31 +74,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-
-    const { count: recentRequestCount, error: requestCountError } =
+    const { data: existingRequest, error: existingRequestError } =
       await supabaseAdmin
         .from("auth_magic_link_requests")
-        .select("*", { count: "exact", head: true })
+        .select("email, request_count, last_requested_at")
         .eq("email", email)
-        .gte("created_at", oneHourAgo);
+        .maybeSingle();
 
-    if (requestCountError) {
-      console.error("Magic link count check failed:", requestCountError);
+    if (existingRequestError) {
+      console.error("Magic link request lookup failed:", existingRequestError);
       return NextResponse.json(
-        { error: `Magic link count check failed: ${requestCountError.message}` },
+        {
+          error: `Magic link request lookup failed: ${existingRequestError.message}`,
+        },
         { status: 500 }
       );
     }
 
-    if ((recentRequestCount ?? 0) >= 2) {
-      return NextResponse.json(
-        {
-          error: "A magic link has already been sent.",
-          code: "MAGIC_LINK_LIMIT_REACHED",
-        },
-        { status: 429 }
+    if (existingRequest?.last_requested_at) {
+      const minutesSinceLastRequest = getMinutesSince(
+        existingRequest.last_requested_at
       );
+
+      if (minutesSinceLastRequest < MAGIC_LINK_COOLDOWN_MINUTES) {
+        const minutesRemaining = Math.ceil(
+          MAGIC_LINK_COOLDOWN_MINUTES - minutesSinceLastRequest
+        );
+
+        return NextResponse.json(
+          {
+            error: `A magic link was already sent recently. Please check your inbox or wait ${minutesRemaining} more minute${
+              minutesRemaining === 1 ? "" : "s"
+            } before requesting another.`,
+            code: "MAGIC_LINK_COOLDOWN_ACTIVE",
+          },
+          { status: 429 }
+        );
+      }
     }
 
     const redirectTo = getRedirectTo();
@@ -113,12 +133,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: insertError } = await supabaseAdmin
-      .from("auth_magic_link_requests")
-      .insert({ email });
+    const nextRequestCount = (existingRequest?.request_count ?? 0) + 1;
+    const nowIso = new Date().toISOString();
 
-    if (insertError) {
-      console.error("Failed to record magic link request:", insertError);
+    const { error: upsertError } = await supabaseAdmin
+      .from("auth_magic_link_requests")
+      .upsert(
+        {
+          email,
+          request_count: nextRequestCount,
+          last_requested_at: nowIso,
+        },
+        { onConflict: "email" }
+      );
+
+    if (upsertError) {
+      console.error("Failed to record magic link request:", upsertError);
     }
 
     return NextResponse.json({
