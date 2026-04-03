@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CSS } from "@dnd-kit/utilities";
 import {
   DndContext,
@@ -16,7 +17,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 type Game = {
@@ -154,7 +154,7 @@ function SortableBallotItem({
         display: "flex",
         gap: 12,
         alignItems: "center",
-        background: "rgba(18,18,18,0.92)",
+        background: "rgba(16,16,16,0.94)",
         padding: isMobileLayout ? 12 : 14,
         borderRadius: 18,
         border: "1px solid rgba(255,255,255,0.07)",
@@ -164,7 +164,7 @@ function SortableBallotItem({
     >
       <div
         style={{
-          width: isMobileLayout ? 50 : 56,
+          width: isMobileLayout ? 52 : 58,
           textAlign: "center",
           flexShrink: 0,
         }}
@@ -251,7 +251,7 @@ function SortableBallotItem({
             height: 36,
             borderRadius: 10,
             border: "none",
-            background: "#2a2a2a",
+            background: "#262626",
             color: "white",
             fontSize: "1rem",
             fontWeight: 900,
@@ -273,7 +273,7 @@ function SortableBallotItem({
             height: 36,
             borderRadius: 10,
             border: "none",
-            background: "#2a2a2a",
+            background: "#262626",
             color: "white",
             fontSize: "1rem",
             fontWeight: 900,
@@ -295,7 +295,7 @@ function SortableBallotItem({
             height: 36,
             borderRadius: 10,
             border: "none",
-            background: "#2a2a2a",
+            background: "#262626",
             color: "white",
             fontSize: "1rem",
             fontWeight: 900,
@@ -379,6 +379,9 @@ export default function VotePage() {
   const [hasTriedCleanFallback, setHasTriedCleanFallback] = useState(false);
   const [hasTriedExpandedFallback, setHasTriedExpandedFallback] = useState(false);
   const [fallbackModeUsed, setFallbackModeUsed] = useState<SearchMode | null>(null);
+
+  const [showSubmitReview, setShowSubmitReview] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const isBallotComplete = useMemo(
     () => selectedGames.every((game) => game !== null),
@@ -629,7 +632,7 @@ export default function VotePage() {
     }
   }
 
-  function clearBallot() {
+  function openClearConfirm() {
     if (hasVoted) return;
 
     const hasAnySelection = selectedGames.some(Boolean);
@@ -639,10 +642,10 @@ export default function VotePage() {
       return;
     }
 
-    const confirmed = window.confirm("Clear your entire Top 10 and start over?");
+    setShowClearConfirm(true);
+  }
 
-    if (!confirmed) return;
-
+  function confirmClearBallot() {
     setSelectedGames(Array(TOTAL_GAMES).fill(null));
     setQuery("");
     setResults([]);
@@ -651,6 +654,7 @@ export default function VotePage() {
     clearMessages();
     resetFallbackState();
     setSubmitMessage("Your ballot has been cleared.");
+    setShowClearConfirm(false);
   }
 
   function jumpToBallot() {
@@ -793,7 +797,7 @@ export default function VotePage() {
     }
   }
 
-  async function submitVote() {
+  async function finalSubmitVote() {
     if (hasVoted) {
       setErrorMessage("This email has already submitted a ballot.");
       return;
@@ -803,12 +807,6 @@ export default function VotePage() {
       setErrorMessage("Fill all 10 ranking slots before submitting.");
       return;
     }
-
-    const confirmed = window.confirm(
-      "Submit your Top 10 now? You only get one final ballot."
-    );
-
-    if (!confirmed) return;
 
     setSubmissionLoading(true);
     clearMessages();
@@ -822,6 +820,7 @@ export default function VotePage() {
 
       if (!token) {
         setErrorMessage("You must be logged in to submit your vote.");
+        setShowSubmitReview(false);
         return;
       }
 
@@ -851,6 +850,7 @@ export default function VotePage() {
       setFallbackResults([]);
       setQuery("");
       resetFallbackState();
+      setShowSubmitReview(false);
     } catch (error) {
       console.error("Submit vote error:", error);
       setErrorMessage("Something went wrong submitting your vote.");
@@ -897,804 +897,1248 @@ export default function VotePage() {
     }
   }
 
+  const ruleCards = [
+    {
+      title: "One final ballot",
+      text: "You get one vote per email, so make sure your order is how you actually want it before you lock it in.",
+    },
+    {
+      title: "Order matters",
+      text: "Your #1 gets the most points, your #10 gets the least, so this is not just a random list of 10 games.",
+    },
+    {
+      title: "DLC rule",
+      text: "DLCs and expansions might show up in deeper search, but only base games count. Elden Ring counts. Shadow of the Erdtree doesn’t.",
+    },
+  ];
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#050505",
-        color: "white",
-        padding: isMobileLayout ? 14 : 26,
-      }}
-    >
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 14,
-            flexWrap: "wrap",
-            marginBottom: 22,
-          }}
-        >
-          <div>
-            <Link
-              href="/"
-              style={{
-                color: "white",
-                textDecoration: "none",
-                fontWeight: 900,
-                letterSpacing: "0.05em",
-              }}
-            >
-              vote100games.com
-            </Link>
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: "0.82rem",
-                color: "#7f7f7f",
-                fontWeight: 600,
-              }}
-            >
-              by Bandit Banks
-            </div>
-          </div>
-
-          {!statusLoading && voterEmail && (
-            <div
-              style={{
-                padding: "12px 14px",
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "#bbb",
-                fontSize: "0.95rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 12,
-                flexWrap: "wrap",
-                backdropFilter: "blur(12px)",
-                width: isMobileLayout ? "100%" : "auto",
-              }}
-            >
-              <div>
-                Voting as:{" "}
-                <span style={{ color: "white", fontWeight: 800 }}>
-                  {voterEmail}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={signOutLoading}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 999,
-                  border: "1px solid #333",
-                  background: "#0f0f0f",
-                  color: "white",
-                  cursor: signOutLoading ? "not-allowed" : "pointer",
-                  opacity: signOutLoading ? 0.7 : 1,
-                  fontWeight: 700,
-                }}
-              >
-                {signOutLoading ? "Signing out..." : "Sign out"}
-              </button>
-            </div>
-          )}
-        </header>
-
-        <div
-          style={{
-            marginBottom: 22,
-            padding: isMobileLayout ? 18 : 28,
-            borderRadius: 26,
-            background:
-              "linear-gradient(180deg, rgba(20,20,20,0.92) 0%, rgba(12,12,12,0.92) 100%)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.32)",
-          }}
-        >
-          <div
-            style={{
-              display: "inline-flex",
-              padding: "7px 12px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "#d0d0d0",
-              fontSize: "0.84rem",
-              marginBottom: 14,
-            }}
-          >
-            Build your ballot
-          </div>
-
-          <h1
-            style={{
-              fontSize: isMobileLayout ? "2.05rem" : "3.25rem",
-              fontWeight: 900,
-              margin: 0,
-              lineHeight: 1.02,
-              letterSpacing: "-0.05em",
-            }}
-          >
-            Vote for Your Top 10 Games
-          </h1>
-
-          <p
-            style={{
-              color: "#acacac",
-              margin: "14px 0 0 0",
-              lineHeight: 1.68,
-              fontSize: isMobileLayout ? "0.98rem" : "1.05rem",
-              maxWidth: 780,
-            }}
-          >
-            This is the ballot that will help decide the final Top 100 for my
-            upcoming video. Search your favorite games, rank them carefully, and
-            lock in the list you want representing your all-time picks.
-          </p>
-        </div>
-
-        <div
-          style={{
-            marginBottom: 24,
-            padding: 18,
-            borderRadius: 20,
-            background: "rgba(18,18,18,0.88)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div style={{ fontSize: "1rem", fontWeight: 800, marginBottom: 4 }}>
-              Ballot Progress: {selectedCount} / {TOTAL_GAMES}
-            </div>
-            <div style={{ color: "#999", fontSize: "0.95rem" }}>
-              {remainingCount === 0
-                ? "Your Top 10 is complete."
-                : `${remainingCount} slot${remainingCount === 1 ? "" : "s"} remaining.`}
-            </div>
-          </div>
-
-          <div
+    <>
+      <main
+        style={{
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at top, rgba(255,255,255,0.05) 0%, rgba(5,5,5,0) 28%), #050505",
+          color: "white",
+          padding: isMobileLayout ? 14 : 26,
+        }}
+      >
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          <header
             style={{
               display: "flex",
-              gap: 10,
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 14,
               flexWrap: "wrap",
-              width: isMobileLayout ? "100%" : "auto",
+              marginBottom: 22,
             }}
           >
-            <button
-              type="button"
-              onClick={jumpToBallot}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "1px solid #333",
-                background: "#0f0f0f",
-                color: "white",
-                cursor: "pointer",
-                fontWeight: 700,
-                width: isMobileLayout ? "100%" : "auto",
-              }}
-            >
-              Jump to My Top 10
-            </button>
-
-            <button
-              type="button"
-              onClick={clearBallot}
-              disabled={interactionsLocked}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "1px solid #333",
-                background: "#0f0f0f",
-                color: "white",
-                cursor: interactionsLocked ? "not-allowed" : "pointer",
-                opacity: interactionsLocked ? 0.7 : 1,
-                fontWeight: 700,
-                width: isMobileLayout ? "100%" : "auto",
-              }}
-            >
-              Clear All
-            </button>
-          </div>
-        </div>
-
-        {statusLoading && (
-          <p style={{ color: "#aaa", marginBottom: 16 }}>Checking vote status...</p>
-        )}
-
-        {!statusLoading && hasVoted && (
-          <div
-            style={{
-              background: "#132a13",
-              border: "1px solid #1f5d1f",
-              color: "#b8ffb8",
-              padding: "16px 18px",
-              borderRadius: 14,
-              marginBottom: 20,
-              lineHeight: 1.5,
-            }}
-          >
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>Vote submitted</div>
             <div>
-              {voterEmail
-                ? `A ballot has already been submitted for ${voterEmail}.`
-                : "A ballot has already been submitted for this account."}
-            </div>
-          </div>
-        )}
-
-        {errorMessage && (
-          <div
-            style={{
-              color: "#ffb3b3",
-              background: "#2a1111",
-              border: "1px solid #5b2222",
-              padding: "12px 14px",
-              borderRadius: 14,
-              marginBottom: 16,
-              lineHeight: 1.5,
-            }}
-          >
-            {errorMessage}
-          </div>
-        )}
-
-        {submitMessage && (
-          <div
-            style={{
-              color: "#b8ffb8",
-              background: "#132a13",
-              border: "1px solid #1f5d1f",
-              padding: "12px 14px",
-              borderRadius: 14,
-              marginBottom: 16,
-              lineHeight: 1.5,
-            }}
-          >
-            {submitMessage}
-          </div>
-        )}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobileLayout
-              ? "1fr"
-              : "minmax(0, 1.06fr) minmax(360px, 0.94fr)",
-            gap: 24,
-            alignItems: "start",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                background: "rgba(14,14,14,0.9)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                borderRadius: 20,
-                padding: 16,
-                marginBottom: 16,
-              }}
-            >
-              <div
+              <Link
+                href="/"
                 style={{
-                  color: "#f3f3f3",
-                  fontSize: "1rem",
-                  fontWeight: 800,
-                  marginBottom: 8,
-                }}
-              >
-                Search database
-              </div>
-              <div
-                style={{
-                  color: "#9e9e9e",
-                  fontSize: "0.94rem",
-                  lineHeight: 1.55,
-                  marginBottom: 12,
-                }}
-              >
-                Search by title, then add games to the next open slot in your ballot.
-                If something is missing, you can pull it in from the wider IGDB database.
-              </div>
-
-              <input
-                type="text"
-                placeholder="Search for a game..."
-                value={query}
-                disabled={interactionsLocked}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setFallbackResults([]);
-                  setHasTriedCleanFallback(false);
-                  setHasTriedExpandedFallback(false);
-                  setFallbackModeUsed(null);
-                  setLastSearchMode("clean");
-                  setErrorMessage("");
-                  setSubmitMessage("");
-                }}
-                onKeyDown={handleSearchKeyDown}
-                style={{
-                  width: "100%",
-                  padding: "14px 15px",
-                  fontSize: "16px",
-                  borderRadius: 12,
-                  border: "1px solid #333",
-                  background: interactionsLocked ? "#0d0d0d" : "#111",
                   color: "white",
+                  textDecoration: "none",
+                  fontWeight: 900,
+                  letterSpacing: "0.05em",
                 }}
-              />
+              >
+                vote100games.com
+              </Link>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: "0.82rem",
+                  color: "#7f7f7f",
+                  fontWeight: 600,
+                }}
+              >
+                made by Bandit Banks
+              </div>
             </div>
 
-            {loading && <p style={{ color: "#aaa" }}>Searching...</p>}
-
-            {results.length > 0 && (
+            {!statusLoading && voterEmail && (
               <div
                 style={{
-                  display: "grid",
-                  gap: 14,
-                  marginTop: 8,
-                  marginBottom: 24,
+                  padding: "12px 14px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  color: "#bbb",
+                  fontSize: "0.95rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  backdropFilter: "blur(12px)",
+                  width: isMobileLayout ? "100%" : "auto",
                 }}
               >
-                {results.map((game, index) => (
-                  <button
-                    key={game.id}
-                    type="button"
-                    disabled={interactionsLocked}
-                    onClick={() => addGameToRanking(game)}
-                    style={{
-                      display: "flex",
-                      gap: 14,
-                      alignItems: "center",
-                      background:
-                        index === highlightedResultIndex
-                          ? "rgba(32,32,32,0.95)"
-                          : "rgba(18,18,18,0.9)",
-                      padding: 14,
-                      borderRadius: 18,
-                      border:
-                        index === highlightedResultIndex
-                          ? "1px solid #5b5b5b"
-                          : "1px solid rgba(255,255,255,0.07)",
-                      cursor: interactionsLocked ? "not-allowed" : "pointer",
-                      textAlign: "left",
-                      color: "white",
-                      opacity: interactionsLocked ? 0.7 : 1,
-                      transition: "transform 0.16s ease, border-color 0.16s ease",
-                    }}
-                  >
-                    <img
-                      src={getGameImage(game.cover_url)}
-                      alt={game.title}
-                      style={{
-                        width: isMobileLayout ? 64 : 72,
-                        height: isMobileLayout ? 84 : 92,
-                        objectFit: "cover",
-                        borderRadius: 10,
-                        background: "#222",
-                        flexShrink: 0,
-                      }}
-                    />
+                <div>
+                  Voting as{" "}
+                  <span style={{ color: "white", fontWeight: 800 }}>
+                    {voterEmail}
+                  </span>
+                </div>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h2
-                        style={{
-                          fontSize: "1rem",
-                          fontWeight: 800,
-                          margin: 0,
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {game.title}
-                      </h2>
-
-                      <p
-                        style={{
-                          color: "#aaa",
-                          margin: "6px 0 0 0",
-                          fontSize: "0.92rem",
-                        }}
-                      >
-                        Year: {game.release_year ?? "Unknown"}
-                      </p>
-
-                      <p
-                        style={{
-                          color: "#777",
-                          margin: "6px 0 0 0",
-                          fontSize: "0.88rem",
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        Platforms: {game.platforms || "Unknown"}
-                      </p>
-                    </div>
-
-                    {!isMobileLayout && (
-                      <div
-                        style={{
-                          color: "#999",
-                          fontSize: "0.9rem",
-                          flexShrink: 0,
-                          fontWeight: 700,
-                        }}
-                      >
-                        Enter
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {!loading && query.trim().length >= 2 && !hasVoted && (
-              <div
-                style={{
-                  marginTop: 20,
-                  marginBottom: 30,
-                  padding: 16,
-                  borderRadius: 18,
-                  background: "rgba(14,14,14,0.9)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                }}
-              >
-                {!hasTriedCleanFallback && (
-                  <>
-                    <p style={{ color: "#aaa", margin: 0, marginBottom: 12, lineHeight: 1.55 }}>
-                      {results.length === 0
-                        ? "No local matches found. Try a deeper search."
-                        : "Still don&apos;t see it? Search deeper."}
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={() => searchFullDatabase("clean")}
-                      disabled={fallbackLoading || interactionsLocked}
-                      style={{
-                        padding: "11px 16px",
-                        borderRadius: 12,
-                        border: "none",
-                        background: "white",
-                        color: "black",
-                        cursor:
-                          fallbackLoading || interactionsLocked
-                            ? "not-allowed"
-                            : "pointer",
-                        fontWeight: 800,
-                        opacity: fallbackLoading || interactionsLocked ? 0.7 : 1,
-                      }}
-                    >
-                      {fallbackLoading && lastSearchMode === "clean"
-                        ? "Searching deeper..."
-                        : "Still don’t see it? Search deeper"}
-                    </button>
-                  </>
-                )}
-
-                {hasTriedCleanFallback && !hasTriedExpandedFallback && (
-                  <div>
-                    <p style={{ color: "#aaa", margin: 0, marginBottom: 12, lineHeight: 1.55 }}>
-                      Still not finding the right one? Try a broader search.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={() => searchFullDatabase("expanded")}
-                      disabled={fallbackLoading || interactionsLocked}
-                      style={{
-                        padding: "11px 16px",
-                        borderRadius: 12,
-                        border: "1px solid #333",
-                        background: "#151515",
-                        color: "white",
-                        cursor:
-                          fallbackLoading || interactionsLocked
-                            ? "not-allowed"
-                            : "pointer",
-                        fontWeight: 800,
-                        opacity: fallbackLoading || interactionsLocked ? 0.7 : 1,
-                      }}
-                    >
-                      {fallbackLoading && lastSearchMode === "expanded"
-                        ? "Trying broader search..."
-                        : "Try broader search"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {hasTriedCleanFallback && !hasVoted && fallbackResults.length > 0 && (
-              <div
-                style={{
-                  display: "grid",
-                  gap: 14,
-                  marginTop: 20,
-                  marginBottom: 18,
-                }}
-              >
-                <p style={{ color: "#aaa", margin: 0 }}>
-                  {fallbackModeUsed === "expanded"
-                    ? "Select the best match from the broader search:"
-                    : "Select the best match from the deeper search:"}
-                </p>
-
-                {fallbackResults.map((game) => (
-                  <button
-                    key={game.igdb_id}
-                    type="button"
-                    onClick={() => importSelectedIgdbGame(game)}
-                    disabled={importLoadingId === game.igdb_id || interactionsLocked}
-                    style={{
-                      display: "flex",
-                      gap: 14,
-                      alignItems: "center",
-                      background: "rgba(18,18,18,0.9)",
-                      padding: 14,
-                      borderRadius: 18,
-                      border: "1px solid rgba(255,255,255,0.07)",
-                      cursor:
-                        importLoadingId === game.igdb_id || interactionsLocked
-                          ? "not-allowed"
-                          : "pointer",
-                      textAlign: "left",
-                      color: "white",
-                      opacity:
-                        importLoadingId === game.igdb_id || interactionsLocked
-                          ? 0.7
-                          : 1,
-                    }}
-                  >
-                    <img
-                      src={getGameImage(game.cover_url)}
-                      alt={game.title}
-                      style={{
-                        width: isMobileLayout ? 64 : 72,
-                        height: isMobileLayout ? 84 : 92,
-                        objectFit: "cover",
-                        borderRadius: 10,
-                        background: "#222",
-                        flexShrink: 0,
-                      }}
-                    />
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h2
-                        style={{
-                          fontSize: "1rem",
-                          fontWeight: 800,
-                          margin: 0,
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {game.title}
-                      </h2>
-
-                      <p
-                        style={{
-                          color: "#aaa",
-                          margin: "6px 0 0 0",
-                          fontSize: "0.92rem",
-                        }}
-                      >
-                        Year: {game.release_year ?? "Unknown"}
-                      </p>
-
-                      <p
-                        style={{
-                          color: "#777",
-                          margin: "6px 0 0 0",
-                          fontSize: "0.88rem",
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        Platforms: {game.platforms || "Unknown"}
-                      </p>
-                    </div>
-
-                    <div style={{ fontWeight: 800, flexShrink: 0 }}>
-                      {importLoadingId === game.igdb_id ? "Adding..." : "Select"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {isMobileLayout && (
-              <div style={{ marginTop: 18, marginBottom: 24 }}>
                 <button
                   type="button"
-                  onClick={jumpToBallot}
+                  onClick={handleSignOut}
+                  disabled={signOutLoading}
                   style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: 12,
+                    padding: "8px 12px",
+                    borderRadius: 999,
                     border: "1px solid #333",
                     background: "#0f0f0f",
                     color: "white",
-                    cursor: "pointer",
-                    fontWeight: 800,
+                    cursor: signOutLoading ? "not-allowed" : "pointer",
+                    opacity: signOutLoading ? 0.7 : 1,
+                    fontWeight: 700,
                   }}
                 >
-                  Jump to My Top 10
+                  {signOutLoading ? "Signing out..." : "Sign out"}
                 </button>
               </div>
             )}
+          </header>
+
+          <div
+            style={{
+              marginBottom: 22,
+              padding: isMobileLayout ? 18 : 28,
+              borderRadius: 28,
+              background: "rgba(18,18,18,0.84)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 24px 70px rgba(0,0,0,0.35)",
+              backdropFilter: "blur(14px)",
+            }}
+          >
+            <h1
+              style={{
+                fontSize: isMobileLayout ? "2.05rem" : "3.3rem",
+                fontWeight: 900,
+                margin: 0,
+                lineHeight: 1.02,
+                letterSpacing: "-0.05em",
+                maxWidth: 820,
+              }}
+            >
+              Build your Top 10
+            </h1>
+
+            <p
+              style={{
+                color: "#acacac",
+                margin: "14px 0 0 0",
+                lineHeight: 1.72,
+                fontSize: isMobileLayout ? "0.98rem" : "1.05rem",
+                maxWidth: 820,
+              }}
+            >
+              This is where you lock in the list. Search your favorite games, rank them
+              properly, and build the Top 10 you actually want counted in the final Top
+              100.
+            </p>
+
+            <div
+              style={{
+                marginTop: 22,
+                display: "grid",
+                gridTemplateColumns: isMobileLayout
+                  ? "1fr"
+                  : "repeat(3, minmax(0, 1fr))",
+                gap: 12,
+              }}
+            >
+              {ruleCards.map((card) => (
+                <div
+                  key={card.title}
+                  style={{
+                    padding: "16px 16px",
+                    borderRadius: 18,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "white",
+                      fontWeight: 800,
+                      fontSize: "1rem",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {card.title}
+                  </div>
+                  <div
+                    style={{
+                      color: "#a8a8a8",
+                      lineHeight: 1.62,
+                      fontSize: "0.93rem",
+                    }}
+                  >
+                    {card.text}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div
-            ref={ballotRef}
             style={{
-              position: isMobileLayout ? "static" : "sticky",
-              top: isMobileLayout ? undefined : 24,
-              alignSelf: "start",
+              marginBottom: 24,
+              padding: 18,
+              borderRadius: 20,
+              background: "rgba(18,18,18,0.88)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              flexWrap: "wrap",
             }}
           >
+            <div>
+              <div style={{ fontSize: "1rem", fontWeight: 800, marginBottom: 4 }}>
+                Ballot progress: {selectedCount} / {TOTAL_GAMES}
+              </div>
+              <div style={{ color: "#999", fontSize: "0.95rem" }}>
+                {remainingCount === 0
+                  ? "Your Top 10 is complete."
+                  : `${remainingCount} slot${remainingCount === 1 ? "" : "s"} left to fill.`}
+              </div>
+            </div>
+
             <div
               style={{
-                padding: 18,
-                borderRadius: 20,
-                background: "rgba(14,14,14,0.92)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                marginBottom: 14,
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                width: isMobileLayout ? "100%" : "auto",
+              }}
+            >
+              <button
+                type="button"
+                onClick={jumpToBallot}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "1px solid #333",
+                  background: "#0f0f0f",
+                  color: "white",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  width: isMobileLayout ? "100%" : "auto",
+                }}
+              >
+                Jump to my Top 10
+              </button>
+
+              <button
+                type="button"
+                onClick={openClearConfirm}
+                disabled={interactionsLocked}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "1px solid #333",
+                  background: "#0f0f0f",
+                  color: "white",
+                  cursor: interactionsLocked ? "not-allowed" : "pointer",
+                  opacity: interactionsLocked ? 0.7 : 1,
+                  fontWeight: 700,
+                  width: isMobileLayout ? "100%" : "auto",
+                }}
+              >
+                Clear all
+              </button>
+            </div>
+          </div>
+
+          {statusLoading && (
+            <p style={{ color: "#aaa", marginBottom: 16 }}>Checking vote status...</p>
+          )}
+
+          {!statusLoading && hasVoted && (
+            <div
+              style={{
+                background: "#132a13",
+                border: "1px solid #1f5d1f",
+                color: "#b8ffb8",
+                padding: "16px 18px",
+                borderRadius: 14,
+                marginBottom: 20,
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Vote submitted</div>
+              <div>
+                {voterEmail
+                  ? `A ballot has already been submitted for ${voterEmail}.`
+                  : "A ballot has already been submitted for this account."}
+              </div>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div
+              style={{
+                color: "#ffb3b3",
+                background: "#2a1111",
+                border: "1px solid #5b2222",
+                padding: "12px 14px",
+                borderRadius: 14,
+                marginBottom: 16,
+                lineHeight: 1.5,
+              }}
+            >
+              {errorMessage}
+            </div>
+          )}
+
+          {submitMessage && (
+            <div
+              style={{
+                color: "#b8ffb8",
+                background: "#132a13",
+                border: "1px solid #1f5d1f",
+                padding: "12px 14px",
+                borderRadius: 14,
+                marginBottom: 16,
+                lineHeight: 1.5,
+              }}
+            >
+              {submitMessage}
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobileLayout
+                ? "1fr"
+                : "minmax(0, 1.06fr) minmax(380px, 0.94fr)",
+              gap: 24,
+              alignItems: "start",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  background: "rgba(14,14,14,0.9)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 22,
+                  padding: 16,
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    color: "#f3f3f3",
+                    fontSize: "1rem",
+                    fontWeight: 800,
+                    marginBottom: 8,
+                  }}
+                >
+                  Search for games
+                </div>
+                <div
+                  style={{
+                    color: "#9e9e9e",
+                    fontSize: "0.94rem",
+                    lineHeight: 1.55,
+                    marginBottom: 12,
+                  }}
+                >
+                  Search by title, then add games to the next open slot in your ballot.
+                  If something is missing, you can search deeper through the wider
+                  database.
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Search for a game..."
+                  value={query}
+                  disabled={interactionsLocked}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setFallbackResults([]);
+                    setHasTriedCleanFallback(false);
+                    setHasTriedExpandedFallback(false);
+                    setFallbackModeUsed(null);
+                    setLastSearchMode("clean");
+                    setErrorMessage("");
+                    setSubmitMessage("");
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  style={{
+                    width: "100%",
+                    padding: "14px 15px",
+                    fontSize: "16px",
+                    borderRadius: 12,
+                    border: "1px solid #333",
+                    background: interactionsLocked ? "#0d0d0d" : "#111",
+                    color: "white",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {loading && <p style={{ color: "#aaa" }}>Searching...</p>}
+
+              {results.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 14,
+                    marginTop: 8,
+                    marginBottom: 24,
+                  }}
+                >
+                  {results.map((game, index) => (
+                    <button
+                      key={game.id}
+                      type="button"
+                      disabled={interactionsLocked}
+                      onClick={() => addGameToRanking(game)}
+                      style={{
+                        display: "flex",
+                        gap: 14,
+                        alignItems: "center",
+                        background:
+                          index === highlightedResultIndex
+                            ? "rgba(32,32,32,0.95)"
+                            : "rgba(18,18,18,0.9)",
+                        padding: 14,
+                        borderRadius: 18,
+                        border:
+                          index === highlightedResultIndex
+                            ? "1px solid #5b5b5b"
+                            : "1px solid rgba(255,255,255,0.07)",
+                        cursor: interactionsLocked ? "not-allowed" : "pointer",
+                        textAlign: "left",
+                        color: "white",
+                        opacity: interactionsLocked ? 0.7 : 1,
+                        transition: "transform 0.16s ease, border-color 0.16s ease",
+                      }}
+                    >
+                      <img
+                        src={getGameImage(game.cover_url)}
+                        alt={game.title}
+                        style={{
+                          width: isMobileLayout ? 64 : 72,
+                          height: isMobileLayout ? 84 : 92,
+                          objectFit: "cover",
+                          borderRadius: 10,
+                          background: "#222",
+                          flexShrink: 0,
+                        }}
+                      />
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2
+                          style={{
+                            fontSize: "1rem",
+                            fontWeight: 800,
+                            margin: 0,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {game.title}
+                        </h2>
+
+                        <p
+                          style={{
+                            color: "#aaa",
+                            margin: "6px 0 0 0",
+                            fontSize: "0.92rem",
+                          }}
+                        >
+                          Year: {game.release_year ?? "Unknown"}
+                        </p>
+
+                        <p
+                          style={{
+                            color: "#777",
+                            margin: "6px 0 0 0",
+                            fontSize: "0.88rem",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          Platforms: {game.platforms || "Unknown"}
+                        </p>
+                      </div>
+
+                      {!isMobileLayout && (
+                        <div
+                          style={{
+                            color: "#999",
+                            fontSize: "0.9rem",
+                            flexShrink: 0,
+                            fontWeight: 700,
+                          }}
+                        >
+                          Add
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!loading && query.trim().length >= 2 && !hasVoted && (
+                <div
+                  style={{
+                    marginTop: 20,
+                    marginBottom: 30,
+                    padding: 16,
+                    borderRadius: 18,
+                    background: "rgba(14,14,14,0.9)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                  }}
+                >
+                  {!hasTriedCleanFallback && (
+                    <>
+                      <p
+                        style={{
+                          color: "#aaa",
+                          margin: 0,
+                          marginBottom: 12,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        {results.length === 0
+                          ? "No local matches found. Try a deeper search."
+                          : "Still don’t see it? Search deeper."}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => searchFullDatabase("clean")}
+                        disabled={fallbackLoading || interactionsLocked}
+                        style={{
+                          padding: "11px 16px",
+                          borderRadius: 12,
+                          border: "none",
+                          background: "white",
+                          color: "black",
+                          cursor:
+                            fallbackLoading || interactionsLocked
+                              ? "not-allowed"
+                              : "pointer",
+                          fontWeight: 800,
+                          opacity: fallbackLoading || interactionsLocked ? 0.7 : 1,
+                        }}
+                      >
+                        {fallbackLoading && lastSearchMode === "clean"
+                          ? "Searching deeper..."
+                          : "Still don’t see it? Search deeper"}
+                      </button>
+                    </>
+                  )}
+
+                  {hasTriedCleanFallback && !hasTriedExpandedFallback && (
+                    <div>
+                      <p
+                        style={{
+                          color: "#aaa",
+                          margin: 0,
+                          marginBottom: 12,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        Still not finding the right one? Try a broader search.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => searchFullDatabase("expanded")}
+                        disabled={fallbackLoading || interactionsLocked}
+                        style={{
+                          padding: "11px 16px",
+                          borderRadius: 12,
+                          border: "1px solid #333",
+                          background: "#151515",
+                          color: "white",
+                          cursor:
+                            fallbackLoading || interactionsLocked
+                              ? "not-allowed"
+                              : "pointer",
+                          fontWeight: 800,
+                          opacity: fallbackLoading || interactionsLocked ? 0.7 : 1,
+                        }}
+                      >
+                        {fallbackLoading && lastSearchMode === "expanded"
+                          ? "Trying broader search..."
+                          : "Try broader search"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {hasTriedCleanFallback && !hasVoted && fallbackResults.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 14,
+                    marginTop: 20,
+                    marginBottom: 18,
+                  }}
+                >
+                  <p style={{ color: "#aaa", margin: 0 }}>
+                    {fallbackModeUsed === "expanded"
+                      ? "Select the best match from the broader search:"
+                      : "Select the best match from the deeper search:"}
+                  </p>
+
+                  {fallbackResults.map((game) => (
+                    <button
+                      key={game.igdb_id}
+                      type="button"
+                      onClick={() => importSelectedIgdbGame(game)}
+                      disabled={importLoadingId === game.igdb_id || interactionsLocked}
+                      style={{
+                        display: "flex",
+                        gap: 14,
+                        alignItems: "center",
+                        background: "rgba(18,18,18,0.9)",
+                        padding: 14,
+                        borderRadius: 18,
+                        border: "1px solid rgba(255,255,255,0.07)",
+                        cursor:
+                          importLoadingId === game.igdb_id || interactionsLocked
+                            ? "not-allowed"
+                            : "pointer",
+                        textAlign: "left",
+                        color: "white",
+                        opacity:
+                          importLoadingId === game.igdb_id || interactionsLocked
+                            ? 0.7
+                            : 1,
+                      }}
+                    >
+                      <img
+                        src={getGameImage(game.cover_url)}
+                        alt={game.title}
+                        style={{
+                          width: isMobileLayout ? 64 : 72,
+                          height: isMobileLayout ? 84 : 92,
+                          objectFit: "cover",
+                          borderRadius: 10,
+                          background: "#222",
+                          flexShrink: 0,
+                        }}
+                      />
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2
+                          style={{
+                            fontSize: "1rem",
+                            fontWeight: 800,
+                            margin: 0,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {game.title}
+                        </h2>
+
+                        <p
+                          style={{
+                            color: "#aaa",
+                            margin: "6px 0 0 0",
+                            fontSize: "0.92rem",
+                          }}
+                        >
+                          Year: {game.release_year ?? "Unknown"}
+                        </p>
+
+                        <p
+                          style={{
+                            color: "#777",
+                            margin: "6px 0 0 0",
+                            fontSize: "0.88rem",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          Platforms: {game.platforms || "Unknown"}
+                        </p>
+                      </div>
+
+                      <div style={{ fontWeight: 800, flexShrink: 0 }}>
+                        {importLoadingId === game.igdb_id ? "Adding..." : "Select"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {isMobileLayout && (
+                <div style={{ marginTop: 18, marginBottom: 24 }}>
+                  <button
+                    type="button"
+                    onClick={jumpToBallot}
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      borderRadius: 12,
+                      border: "1px solid #333",
+                      background: "#0f0f0f",
+                      color: "white",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Jump to my Top 10
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div
+              ref={ballotRef}
+              style={{
+                position: isMobileLayout ? "static" : "sticky",
+                top: isMobileLayout ? undefined : 24,
+                alignSelf: "start",
               }}
             >
               <div
                 style={{
-                  marginBottom: 6,
-                  fontSize: "1.3rem",
-                  fontWeight: 900,
+                  padding: 18,
+                  borderRadius: 22,
+                  background: "rgba(14,14,14,0.92)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  marginBottom: 14,
                 }}
               >
-                My Top 10
+                <div
+                  style={{
+                    marginBottom: 6,
+                    fontSize: "1.3rem",
+                    fontWeight: 900,
+                  }}
+                >
+                  My Top 10
+                </div>
+
+                <div
+                  style={{
+                    color: "#999",
+                    fontSize: "0.92rem",
+                    lineHeight: 1.56,
+                  }}
+                >
+                  Drag to reorder, use the arrows, or remove games. Higher ranks are
+                  worth more points, so your order absolutely matters.
+                </div>
               </div>
 
-              <div
-                style={{
-                  color: "#999",
-                  fontSize: "0.92rem",
-                  lineHeight: 1.56,
-                }}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                Drag to reorder or use the arrow buttons. Higher ranks are worth
-                more points, so your order matters.
-              </div>
-            </div>
+                <SortableContext
+                  items={sortableIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
+                    {selectedGames.map((game, index) => {
+                      if (!game) {
+                        const rank = index + 1;
+                        const points = getPointsForRank(rank);
 
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={sortableIds}
-                strategy={verticalListSortingStrategy}
-              >
-                <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
-                  {selectedGames.map((game, index) => {
-                    if (!game) {
-                      const rank = index + 1;
-                      const points = getPointsForRank(rank);
-
-                      return (
-                        <div
-                          key={`empty-${index}`}
-                          style={{
-                            display: "flex",
-                            gap: 12,
-                            alignItems: "center",
-                            background: "rgba(14,14,14,0.9)",
-                            padding: isMobileLayout ? 12 : 14,
-                            borderRadius: 18,
-                            border: "1px solid rgba(255,255,255,0.07)",
-                            minHeight: isMobileLayout ? 108 : 118,
-                          }}
-                        >
+                        return (
                           <div
+                            key={`empty-${index}`}
                             style={{
-                              width: isMobileLayout ? 50 : 56,
-                              textAlign: "center",
-                              flexShrink: 0,
+                              display: "flex",
+                              gap: 12,
+                              alignItems: "center",
+                              background: "rgba(14,14,14,0.9)",
+                              padding: isMobileLayout ? 12 : 14,
+                              borderRadius: 18,
+                              border: "1px solid rgba(255,255,255,0.07)",
+                              minHeight: isMobileLayout ? 108 : 118,
                             }}
                           >
                             <div
                               style={{
-                                fontSize: isMobileLayout ? "1.05rem" : "1.2rem",
-                                fontWeight: 900,
-                                color: "white",
-                                lineHeight: 1,
+                                width: isMobileLayout ? 52 : 58,
+                                textAlign: "center",
+                                flexShrink: 0,
                               }}
                             >
-                              #{rank}
+                              <div
+                                style={{
+                                  fontSize: isMobileLayout ? "1.05rem" : "1.2rem",
+                                  fontWeight: 900,
+                                  color: "white",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                #{rank}
+                              </div>
+                              <div
+                                style={{
+                                  color: "#8f8f8f",
+                                  fontSize: "0.78rem",
+                                  marginTop: 6,
+                                }}
+                              >
+                                {points} pts
+                              </div>
                             </div>
-                            <div
-                              style={{
-                                color: "#8f8f8f",
-                                fontSize: "0.78rem",
-                                marginTop: 6,
-                              }}
-                            >
-                              {points} pts
-                            </div>
-                          </div>
 
-                          <div style={{ color: "#666", fontSize: "0.95rem" }}>
-                            Empty slot
+                            <div style={{ color: "#666", fontSize: "0.95rem" }}>
+                              Empty slot
+                            </div>
                           </div>
-                        </div>
+                        );
+                      }
+
+                      return (
+                        <SortableBallotItem
+                          key={`game-${game.id}`}
+                          slotId={`game-${game.id}`}
+                          game={game}
+                          index={index}
+                          selectedCount={selectedCount}
+                          interactionsLocked={interactionsLocked}
+                          onMoveUp={(i) => moveGame(i, "up")}
+                          onMoveDown={(i) => moveGame(i, "down")}
+                          onRemove={removeGame}
+                          isMobileLayout={isMobileLayout}
+                        />
                       );
-                    }
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
-                    return (
-                      <SortableBallotItem
-                        key={`game-${game.id}`}
-                        slotId={`game-${game.id}`}
-                        game={game}
-                        index={index}
-                        selectedCount={selectedCount}
-                        interactionsLocked={interactionsLocked}
-                        onMoveUp={(i) => moveGame(i, "up")}
-                        onMoveDown={(i) => moveGame(i, "down")}
-                        onRemove={removeGame}
-                        isMobileLayout={isMobileLayout}
-                      />
-                    );
-                  })}
+              {!hasVoted && (
+                <div
+                  style={{
+                    padding: 16,
+                    borderRadius: 18,
+                    background: "rgba(14,14,14,0.92)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    marginBottom: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "white",
+                      fontWeight: 800,
+                      fontSize: "1rem",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Before you submit
+                  </div>
+                  <div
+                    style={{
+                      color: "#9a9a9a",
+                      lineHeight: 1.6,
+                      fontSize: "0.92rem",
+                    }}
+                  >
+                    Make sure your order is right. Once you submit, that ballot is final.
+                  </div>
                 </div>
-              </SortableContext>
-            </DndContext>
+              )}
 
-            {!hasVoted && isBallotComplete && (
-              <button
-                type="button"
-                onClick={submitVote}
-                disabled={submissionLoading || statusLoading}
+              {!hasVoted && isBallotComplete && (
+                <button
+                  type="button"
+                  onClick={() => setShowSubmitReview(true)}
+                  disabled={submissionLoading || statusLoading}
+                  style={{
+                    width: "100%",
+                    padding: "16px",
+                    borderRadius: 14,
+                    border: "none",
+                    background: "#ffffff",
+                    color: "#000000",
+                    fontSize: "1rem",
+                    fontWeight: 900,
+                    cursor:
+                      submissionLoading || statusLoading ? "not-allowed" : "pointer",
+                    opacity: submissionLoading || statusLoading ? 0.7 : 1,
+                    boxShadow: "0 10px 26px rgba(255,255,255,0.08)",
+                  }}
+                >
+                  Review and submit
+                </button>
+              )}
+
+              {!hasVoted && !isBallotComplete && (
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    width: "100%",
+                    padding: "16px",
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "#141414",
+                    color: "#6f6f6f",
+                    fontSize: "1rem",
+                    fontWeight: 900,
+                    cursor: "not-allowed",
+                  }}
+                >
+                  Fill all 10 spots to submit
+                </button>
+              )}
+
+              <div
                 style={{
-                  width: "100%",
-                  padding: "16px",
-                  borderRadius: 14,
-                  border: "none",
-                  background: "#ffffff",
-                  color: "#000000",
-                  fontSize: "1rem",
-                  fontWeight: 900,
-                  cursor:
-                    submissionLoading || statusLoading ? "not-allowed" : "pointer",
-                  opacity: submissionLoading || statusLoading ? 0.7 : 1,
-                  boxShadow: "0 10px 26px rgba(255,255,255,0.08)",
+                  marginTop: 18,
+                  color: "#666",
+                  fontSize: "0.82rem",
+                  lineHeight: 1.55,
+                  textAlign: isMobileLayout ? "center" : "left",
                 }}
               >
-                {submissionLoading ? "Submitting vote..." : "Submit Vote"}
-              </button>
-            )}
-
-            <div
-              style={{
-                marginTop: 18,
-                color: "#666",
-                fontSize: "0.82rem",
-                lineHeight: 1.55,
-                textAlign: isMobileLayout ? "center" : "left",
-              }}
-            >
-              Game data provided by IGDB.
+                Game data provided by IGDB.
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      {showClearConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.72)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              background: "rgba(16,16,16,0.98)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 24,
+              padding: 22,
+              boxShadow: "0 24px 80px rgba(0,0,0,0.45)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1.35rem",
+                fontWeight: 900,
+                marginBottom: 10,
+              }}
+            >
+              Clear your ballot?
+            </div>
+            <div
+              style={{
+                color: "#a8a8a8",
+                lineHeight: 1.65,
+                fontSize: "0.96rem",
+                marginBottom: 20,
+              }}
+            >
+              This will remove everything from your current Top 10 and let you start over.
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                style={{
+                  flex: 1,
+                  minWidth: 140,
+                  padding: "13px 16px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#151515",
+                  color: "white",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Never mind
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmClearBallot}
+                style={{
+                  flex: 1,
+                  minWidth: 140,
+                  padding: "13px 16px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "white",
+                  color: "black",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                Clear it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSubmitReview && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.76)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 760,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              background: "rgba(16,16,16,0.98)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 26,
+              padding: isMobileLayout ? 18 : 24,
+              boxShadow: "0 24px 80px rgba(0,0,0,0.48)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+                marginBottom: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: isMobileLayout ? "1.5rem" : "1.9rem",
+                    fontWeight: 900,
+                    lineHeight: 1.05,
+                    marginBottom: 8,
+                  }}
+                >
+                  Confirm your Top 10
+                </div>
+                <div
+                  style={{
+                    color: "#a8a8a8",
+                    lineHeight: 1.65,
+                    fontSize: "0.96rem",
+                    maxWidth: 560,
+                  }}
+                >
+                  This is your final review screen. Once you submit this list, that ballot
+                  is locked in and counted.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowSubmitReview(false)}
+                disabled={submissionLoading}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  border: "none",
+                  background: "#202020",
+                  color: "white",
+                  fontSize: "1.1rem",
+                  fontWeight: 900,
+                  cursor: submissionLoading ? "not-allowed" : "pointer",
+                  opacity: submissionLoading ? 0.7 : 1,
+                  flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                marginBottom: 18,
+                padding: 16,
+                borderRadius: 18,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "#cfcfcf",
+                fontSize: "0.94rem",
+                lineHeight: 1.6,
+              }}
+            >
+              Quick reminder: DLCs and expansions may appear in deeper search, but only
+              base games count toward the final list.
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              {filledGames.map((game, index) => {
+                const rank = index + 1;
+                const points = getPointsForRank(rank);
+
+                return (
+                  <div
+                    key={`review-${game.id}`}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                      background: "rgba(18,18,18,0.92)",
+                      padding: isMobileLayout ? 12 : 14,
+                      borderRadius: 18,
+                      border: "1px solid rgba(255,255,255,0.07)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: isMobileLayout ? 52 : 58,
+                        textAlign: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: isMobileLayout ? "1.05rem" : "1.2rem",
+                          fontWeight: 900,
+                          color: "white",
+                          lineHeight: 1,
+                        }}
+                      >
+                        #{rank}
+                      </div>
+                      <div
+                        style={{
+                          color: "#8f8f8f",
+                          fontSize: "0.78rem",
+                          marginTop: 6,
+                        }}
+                      >
+                        {points} pts
+                      </div>
+                    </div>
+
+                    <img
+                      src={getGameImage(game.cover_url)}
+                      alt={game.title}
+                      style={{
+                        width: isMobileLayout ? 54 : 62,
+                        height: isMobileLayout ? 72 : 82,
+                        objectFit: "cover",
+                        borderRadius: 10,
+                        background: "#222",
+                        flexShrink: 0,
+                      }}
+                    />
+
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          color: "white",
+                          fontWeight: 800,
+                          fontSize: "0.98rem",
+                          lineHeight: 1.25,
+                        }}
+                      >
+                        {game.title}
+                      </div>
+                      <div
+                        style={{
+                          color: "#8f8f8f",
+                          fontSize: "0.88rem",
+                          marginTop: 6,
+                        }}
+                      >
+                        {game.release_year ?? "Unknown"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                marginTop: 20,
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowSubmitReview(false)}
+                disabled={submissionLoading}
+                style={{
+                  flex: 1,
+                  minWidth: 180,
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#151515",
+                  color: "white",
+                  fontWeight: 800,
+                  cursor: submissionLoading ? "not-allowed" : "pointer",
+                  opacity: submissionLoading ? 0.7 : 1,
+                }}
+              >
+                Go back and edit
+              </button>
+
+              <button
+                type="button"
+                onClick={finalSubmitVote}
+                disabled={submissionLoading}
+                style={{
+                  flex: 1,
+                  minWidth: 180,
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "white",
+                  color: "black",
+                  fontWeight: 900,
+                  cursor: submissionLoading ? "not-allowed" : "pointer",
+                  opacity: submissionLoading ? 0.7 : 1,
+                  boxShadow: "0 10px 26px rgba(255,255,255,0.08)",
+                }}
+              >
+                {submissionLoading ? "Submitting vote..." : "Submit my final ballot"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

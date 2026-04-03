@@ -10,11 +10,6 @@ type HomeGame = {
   cover_url: string | null;
 };
 
-function duplicateGames(games: HomeGame[]) {
-  if (games.length === 0) return [];
-  return [...games, ...games];
-}
-
 function shuffleArray<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
@@ -50,14 +45,14 @@ export default function AuthPage() {
           .from("games")
           .select("id, title, cover_url")
           .not("cover_url", "is", null)
-          .limit(50);
+          .limit(80);
 
         if (error) {
           console.error("Failed to load auth background games:", error.message);
           return;
         }
 
-        setGames(shuffleArray(data ?? []).slice(0, 20));
+        setGames(shuffleArray(data ?? []).slice(0, 24));
       } catch (error) {
         console.error("Failed to load auth background games:", error);
       }
@@ -66,8 +61,8 @@ export default function AuthPage() {
     loadGames();
   }, []);
 
-  const topRowGames = useMemo(() => duplicateGames(games.slice(0, 10)), [games]);
-  const bottomRowGames = useMemo(() => duplicateGames(games.slice(10, 20)), [games]);
+  const topRowGames = useMemo(() => games.slice(0, 12), [games]);
+  const bottomRowGames = useMemo(() => games.slice(12, 24), [games]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,7 +87,7 @@ export default function AuthPage() {
         return;
       }
 
-      setMessage(data.message || "Magic link sent. Check your email.");
+      setMessage(data.message || "Voting link sent. Check your email.");
     } catch (err) {
       console.error(err);
       setError("Something went wrong.");
@@ -101,31 +96,88 @@ export default function AuthPage() {
     }
   }
 
+  function renderGameGroup(rowGames: HomeGame[], rowPrefix: string) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          gap: 18,
+          width: "max-content",
+          paddingRight: 18,
+          flexShrink: 0,
+        }}
+      >
+        {rowGames.map((game, index) => (
+          <div
+            key={`${rowPrefix}-${game.id}-${index}`}
+            style={{
+              width: isMobile ? 110 : 170,
+              height: isMobile ? 150 : 230,
+              borderRadius: isMobile ? 12 : 18,
+              overflow: "hidden",
+              background: "#111",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+              flexShrink: 0,
+            }}
+          >
+            {game.cover_url ? (
+              <img
+                src={game.cover_url}
+                alt={game.title}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            ) : null}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <>
       <style>{`
         @keyframes authMarqueeLeft {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(-50%, 0, 0); }
         }
 
         @keyframes authMarqueeRight {
-          0% { transform: translateX(-50%); }
-          100% { transform: translateX(0); }
+          from { transform: translate3d(-50%, 0, 0); }
+          to { transform: translate3d(0, 0, 0); }
+        }
+
+        .auth-marquee-left,
+        .auth-marquee-right {
+          will-change: transform;
+          backface-visibility: hidden;
+          transform: translateZ(0);
         }
 
         .auth-marquee-left {
-          animation: authMarqueeLeft 48s linear infinite;
+          animation: authMarqueeLeft 42s linear infinite;
         }
 
         .auth-marquee-right {
-          animation: authMarqueeRight 52s linear infinite;
+          animation: authMarqueeRight 46s linear infinite;
         }
 
         @media (max-width: 900px) {
           .auth-marquee-left,
           .auth-marquee-right {
-            animation-duration: 68s;
+            animation-duration: 62s;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .auth-marquee-left,
+          .auth-marquee-right {
+            animation: none;
           }
         }
       `}</style>
@@ -152,7 +204,7 @@ export default function AuthPage() {
               position: "absolute",
               inset: 0,
               background:
-                "radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0) 48%)",
+                "radial-gradient(circle at center, rgba(255,255,255,0.085) 0%, rgba(0,0,0,0) 48%)",
               zIndex: 2,
             }}
           />
@@ -161,7 +213,7 @@ export default function AuthPage() {
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to bottom, rgba(5,5,5,0.84) 0%, rgba(5,5,5,0.58) 32%, rgba(5,5,5,0.58) 68%, rgba(5,5,5,0.84) 100%)",
+                "linear-gradient(to bottom, rgba(5,5,5,0.84) 0%, rgba(5,5,5,0.56) 30%, rgba(5,5,5,0.56) 70%, rgba(5,5,5,0.84) 100%)",
               zIndex: 2,
             }}
           />
@@ -170,7 +222,7 @@ export default function AuthPage() {
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to right, rgba(5,5,5,0.92) 0%, rgba(5,5,5,0.32) 18%, rgba(5,5,5,0.32) 82%, rgba(5,5,5,0.92) 100%)",
+                "linear-gradient(to right, rgba(5,5,5,0.92) 0%, rgba(5,5,5,0.28) 18%, rgba(5,5,5,0.28) 82%, rgba(5,5,5,0.92) 100%)",
               zIndex: 2,
             }}
           />
@@ -183,9 +235,9 @@ export default function AuthPage() {
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
-                gap: isMobile ? 16 : 24,
-                transform: isMobile ? "rotate(-6deg) scale(1.2)" : "rotate(-6deg) scale(1.08)",
-                opacity: isMobile ? 0.24 : 0.32,
+                gap: isMobile ? 18 : 30,
+                transform: isMobile ? "rotate(-6deg) scale(1.18)" : "rotate(-6deg) scale(1.08)",
+                opacity: isMobile ? 0.28 : 0.38,
                 zIndex: 1,
               }}
             >
@@ -194,37 +246,13 @@ export default function AuthPage() {
                   className="auth-marquee-left"
                   style={{
                     display: "flex",
-                    gap: 16,
                     width: "max-content",
+                    willChange: "transform",
+                    transform: "translateZ(0)",
                   }}
                 >
-                  {topRowGames.map((game, index) => (
-                    <div
-                      key={`auth-top-${game.id}-${index}`}
-                      style={{
-                        width: isMobile ? 95 : 130,
-                        height: isMobile ? 132 : 180,
-                        borderRadius: isMobile ? 10 : 14,
-                        overflow: "hidden",
-                        background: "#111",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {game.cover_url ? (
-                        <img
-                          src={game.cover_url}
-                          alt={game.title}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      ) : null}
-                    </div>
-                  ))}
+                  {renderGameGroup(topRowGames, "auth-top-a")}
+                  {renderGameGroup(topRowGames, "auth-top-b")}
                 </div>
               </div>
 
@@ -233,37 +261,13 @@ export default function AuthPage() {
                   className="auth-marquee-right"
                   style={{
                     display: "flex",
-                    gap: 16,
                     width: "max-content",
+                    willChange: "transform",
+                    transform: "translateZ(0)",
                   }}
                 >
-                  {bottomRowGames.map((game, index) => (
-                    <div
-                      key={`auth-bottom-${game.id}-${index}`}
-                      style={{
-                        width: isMobile ? 95 : 130,
-                        height: isMobile ? 132 : 180,
-                        borderRadius: isMobile ? 10 : 14,
-                        overflow: "hidden",
-                        background: "#111",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {game.cover_url ? (
-                        <img
-                          src={game.cover_url}
-                          alt={game.title}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      ) : null}
-                    </div>
-                  ))}
+                  {renderGameGroup(bottomRowGames, "auth-bottom-a")}
+                  {renderGameGroup(bottomRowGames, "auth-bottom-b")}
                 </div>
               </div>
             </div>
@@ -312,7 +316,7 @@ export default function AuthPage() {
                   fontWeight: 600,
                 }}
               >
-                by Bandit Banks
+                made by Bandit Banks
               </div>
             </div>
 
@@ -395,9 +399,8 @@ export default function AuthPage() {
                     lineHeight: 1.72,
                   }}
                 >
-                  This whole project exists because I wanted a Top 100 Games list
-                  decided by the internet, not a handful of people. Sign in, cast
-                  your ballot, and help shape the final Bandit Banks video reveal.
+                  Sign in, cast your ballot, and help decide the final Top 100. Once
+                  voting wraps up, I’ll turn the results into the full video reveal.
                 </p>
 
                 <div
@@ -471,7 +474,7 @@ export default function AuthPage() {
                     letterSpacing: "-0.03em",
                   }}
                 >
-                  Get your magic link
+                  Get your voting link
                 </h1>
 
                 <p
@@ -482,8 +485,8 @@ export default function AuthPage() {
                     fontSize: "0.98rem",
                   }}
                 >
-                  Enter your email and I&apos;ll send you a secure sign-in link so
-                  you can submit your Top 10. One vote per email.
+                  Enter your email and I&apos;ll send you a secure sign-in link so you
+                  can submit your Top 10. One vote per email.
                 </p>
 
                 <form onSubmit={handleSubmit}>
@@ -533,7 +536,7 @@ export default function AuthPage() {
                       e.currentTarget.style.boxShadow = "0 10px 30px rgba(255,255,255,0.08)";
                     }}
                   >
-                    {loading ? "Sending..." : "Send magic link"}
+                    {loading ? "Sending..." : "Send voting link"}
                   </button>
                 </form>
 
@@ -577,7 +580,7 @@ export default function AuthPage() {
                     lineHeight: 1.55,
                   }}
                 >
-                  Check your inbox carefully — and your spam folder if needed.
+                  Check your inbox carefully, and your spam folder if needed.
                 </div>
               </div>
             </div>

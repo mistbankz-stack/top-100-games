@@ -4,23 +4,32 @@ const STEPS = [
   {
     number: "01",
     title: "Sign in with your email",
-    text: "Use a magic link to sign in quickly. No password, no account setup headaches.",
+    text: "Use a magic link and get in quick. No password, no account setup, no extra nonsense.",
   },
   {
     number: "02",
-    title: "Build your personal Top 10",
-    text: "Search the database, add your favorite games, and rank them from #1 to #10.",
+    title: "Build your Top 10",
+    text: "Search for your favorite games, add them to your list, and rank them from #1 to #10.",
   },
   {
     number: "03",
-    title: "Submit one final ballot",
-    text: "Each rank is worth points, so your order matters. Once you submit, your vote is locked in.",
+    title: "Double check the order",
+    text: "Your ranking matters, so make sure your list is in the right order before you lock it in.",
   },
   {
     number: "04",
-    title: "Help decide the final Top 100",
-    text: "Every ballot contributes to the final community ranking that Bandit Banks will reveal in a video.",
+    title: "Submit your ballot",
+    text: "Once you submit, your vote is locked, added to the totals, and counted toward the final Top 100.",
   },
+];
+
+const RULES = [
+  "One ballot per email.",
+  "Your ranking order matters.",
+  "Can’t find a game? You can expand the search.",
+  "DLCs and expansions may appear in deeper search results, but only base games will count toward the final list.",
+  "For example: Elden Ring counts, but Shadow of the Erdtree doesn’t. The Witcher 3 counts, but Blood and Wine doesn’t.... you get the idea",
+  "Once you submit your ballot, it’s locked in.",
 ];
 
 export default function HowItWorksPage() {
@@ -28,12 +37,13 @@ export default function HowItWorksPage() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#050505",
+        background:
+          "radial-gradient(circle at top, rgba(255,255,255,0.06) 0%, rgba(5,5,5,0) 30%), #050505",
         color: "white",
-        padding: "28px 18px 48px",
+        padding: "28px 18px 56px",
       }}
     >
-      <div style={{ maxWidth: 980, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
         <header
           style={{
             display: "flex",
@@ -52,6 +62,7 @@ export default function HowItWorksPage() {
                 textDecoration: "none",
                 fontWeight: 900,
                 letterSpacing: "0.05em",
+                fontSize: "1rem",
               }}
             >
               vote100games.com
@@ -64,7 +75,7 @@ export default function HowItWorksPage() {
                 fontWeight: 600,
               }}
             >
-              by Bandit Banks
+              made by Bandit Banks
             </div>
           </div>
 
@@ -79,6 +90,7 @@ export default function HowItWorksPage() {
                 textDecoration: "none",
                 color: "white",
                 fontWeight: 700,
+                backdropFilter: "blur(12px)",
               }}
             >
               Back home
@@ -92,6 +104,7 @@ export default function HowItWorksPage() {
                 color: "black",
                 textDecoration: "none",
                 fontWeight: 900,
+                boxShadow: "0 10px 30px rgba(255,255,255,0.08)",
               }}
             >
               Vote now
@@ -101,40 +114,25 @@ export default function HowItWorksPage() {
 
         <section
           style={{
-            padding: "28px",
-            borderRadius: 24,
-            background: "rgba(18,18,18,0.86)",
+            padding: "clamp(22px, 4vw, 34px)",
+            borderRadius: 28,
+            background: "rgba(18,18,18,0.82)",
             border: "1px solid rgba(255,255,255,0.08)",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+            boxShadow: "0 24px 70px rgba(0,0,0,0.35)",
+            backdropFilter: "blur(14px)",
           }}
         >
-          <div
-            style={{
-              display: "inline-flex",
-              padding: "8px 14px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "#d6d6d6",
-              fontSize: "0.9rem",
-              marginBottom: 18,
-            }}
-          >
-            How it works
-          </div>
-
           <h1
             style={{
               margin: 0,
-              fontSize: "clamp(2.4rem, 5vw, 4rem)",
-              lineHeight: 1.04,
+              fontSize: "clamp(2.5rem, 5vw, 4.35rem)",
+              lineHeight: 1.02,
               letterSpacing: "-0.05em",
               fontWeight: 900,
+              maxWidth: 780,
             }}
           >
-            A Top 100 list
-            <br />
-            decided by the internet
+            How this works
           </h1>
 
           <p
@@ -142,20 +140,20 @@ export default function HowItWorksPage() {
               marginTop: 18,
               maxWidth: 760,
               color: "#b0b0b0",
-              fontSize: "1.05rem",
-              lineHeight: 1.72,
+              fontSize: "1.06rem",
+              lineHeight: 1.75,
             }}
           >
-            I&apos;m Bandit Banks, and I got tired of seeing “greatest games ever”
-            lists decided by a tiny group of people. So I built this project to do
-            it differently: one ballot at a time, with the final results turning into
-            a full video reveal.
+            Pretty simple. You sign in, build your Top 10, rank it properly, and submit
+            one final ballot. After that, your vote gets added to the totals that will
+            decide the final Top 100.
           </p>
 
           <div
             style={{
-              marginTop: 28,
+              marginTop: 30,
               display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: 14,
             }}
           >
@@ -163,10 +161,11 @@ export default function HowItWorksPage() {
               <div
                 key={step.number}
                 style={{
-                  padding: "18px",
-                  borderRadius: 18,
+                  padding: "20px",
+                  borderRadius: 20,
                   background: "rgba(255,255,255,0.04)",
                   border: "1px solid rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(10px)",
                 }}
               >
                 <div
@@ -175,7 +174,7 @@ export default function HowItWorksPage() {
                     fontWeight: 800,
                     fontSize: "0.8rem",
                     letterSpacing: "0.08em",
-                    marginBottom: 8,
+                    marginBottom: 10,
                   }}
                 >
                   {step.number}
@@ -185,7 +184,8 @@ export default function HowItWorksPage() {
                     color: "white",
                     fontWeight: 800,
                     fontSize: "1.08rem",
-                    marginBottom: 8,
+                    marginBottom: 10,
+                    lineHeight: 1.3,
                   }}
                 >
                   {step.title}
@@ -193,7 +193,7 @@ export default function HowItWorksPage() {
                 <div
                   style={{
                     color: "#aaaaaa",
-                    lineHeight: 1.6,
+                    lineHeight: 1.68,
                     fontSize: "0.97rem",
                   }}
                 >
@@ -205,27 +205,175 @@ export default function HowItWorksPage() {
 
           <div
             style={{
-              marginTop: 28,
-              padding: "18px",
-              borderRadius: 18,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              marginTop: 30,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 14,
             }}
           >
             <div
               style={{
-                color: "white",
-                fontWeight: 800,
-                marginBottom: 8,
-                fontSize: "1.02rem",
+                padding: "20px",
+                borderRadius: 20,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              A few quick rules
+              <div
+                style={{
+                  color: "white",
+                  fontWeight: 800,
+                  marginBottom: 10,
+                  fontSize: "1.02rem",
+                }}
+              >
+                Why the ranking matters
+              </div>
+              <div
+                style={{
+                  color: "#aaaaaa",
+                  lineHeight: 1.7,
+                  fontSize: "0.97rem",
+                }}
+              >
+                This isn’t just a list of games people like. The order matters too. A
+                game ranked #1 is worth more than a game ranked #10, so where you place
+                something can make a real difference.
+              </div>
             </div>
-            <div style={{ color: "#aaaaaa", lineHeight: 1.7, fontSize: "0.97rem" }}>
-              One ballot per email. Your ranking order matters. If you can&apos;t find a
-              game in the initial search, the site can pull deeper from the wider
-              database. Once your ballot is submitted, it&apos;s final.
+
+            <div
+              style={{
+                padding: "20px",
+                borderRadius: 20,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <div
+                style={{
+                  color: "white",
+                  fontWeight: 800,
+                  marginBottom: 10,
+                  fontSize: "1.02rem",
+                }}
+              >
+                A few quick rules
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                }}
+              >
+                {RULES.map((rule) => (
+                  <div
+                    key={rule}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      color: "#aaaaaa",
+                      lineHeight: 1.6,
+                      fontSize: "0.97rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "white",
+                        marginTop: 8,
+                        flexShrink: 0,
+                        opacity: 0.9,
+                      }}
+                    />
+                    <span>{rule}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: 30,
+              padding: "22px",
+              borderRadius: 22,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1.08rem",
+                fontWeight: 800,
+                color: "white",
+                marginBottom: 8,
+              }}
+            >
+              Ready to lock in your list?
+            </div>
+            <div
+              style={{
+                color: "#aaaaaa",
+                lineHeight: 1.7,
+                fontSize: "0.97rem",
+                maxWidth: 620,
+                margin: "0 auto 18px",
+              }}
+            >
+              Build your Top 10, submit your ballot, and help decide the final Top 100.
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <Link
+                href="/auth"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "14px 20px",
+                  borderRadius: 12,
+                  background: "white",
+                  color: "black",
+                  textDecoration: "none",
+                  fontWeight: 900,
+                  minWidth: 180,
+                  boxShadow: "0 10px 30px rgba(255,255,255,0.08)",
+                }}
+              >
+                Vote your Top 10
+              </Link>
+
+              <a
+                href="https://www.youtube.com/@banditbanks"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "14px 20px",
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.06)",
+                  color: "white",
+                  textDecoration: "none",
+                  fontWeight: 800,
+                  minWidth: 220,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                }}
+              >
+                Check out my YouTube channel →
+              </a>
             </div>
           </div>
         </section>
