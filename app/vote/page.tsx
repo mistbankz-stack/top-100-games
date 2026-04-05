@@ -143,7 +143,6 @@ function SortableBallotItem({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.82 : 1,
-    touchAction: "none" as const,
   };
 
   return (
@@ -239,7 +238,7 @@ function SortableBallotItem({
           flexShrink: 0,
         }}
       >
-        <button
+         <button
           type="button"
           {...attributes}
           {...listeners}
@@ -257,6 +256,7 @@ function SortableBallotItem({
             fontWeight: 900,
             cursor: interactionsLocked ? "not-allowed" : "grab",
             opacity: interactionsLocked ? 0.5 : 1,
+            touchAction: "none",
           }}
         >
           ≡
@@ -348,8 +348,8 @@ export default function VotePage() {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 150,
-        tolerance: 6,
+        delay: 180,
+        tolerance: 8,
       },
     })
   );
