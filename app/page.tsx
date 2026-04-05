@@ -75,8 +75,11 @@ export default function Home() {
         const { data, error } = await supabase
           .from("games")
           .select("id, title, cover_url")
+          .gte("id", 1)
+          .lte("id", 79)
+          .neq("id", 6)
           .not("cover_url", "is", null)
-          .limit(80);
+          .order("id", { ascending: true });
 
         if (error) {
           console.error("Failed to load homepage games:", error.message);
@@ -84,7 +87,15 @@ export default function Home() {
           return;
         }
 
-        const shuffled = shuffleArray(data ?? []).slice(0, 24);
+        const safeGames = (data ?? []).filter(
+          (game) =>
+            game.id >= 1 &&
+            game.id <= 79 &&
+            game.id !== 6 &&
+            !!game.cover_url
+        );
+
+        const shuffled = shuffleArray(safeGames).slice(0, 24);
         setGames(shuffled);
       } catch (error) {
         console.error("Failed to fetch homepage games:", error);

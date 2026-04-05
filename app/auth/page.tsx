@@ -44,17 +44,30 @@ export default function AuthPage() {
         const { data, error } = await supabase
           .from("games")
           .select("id, title, cover_url")
+          .gte("id", 1)
+          .lte("id", 79)
+          .neq("id", 6)
           .not("cover_url", "is", null)
-          .limit(80);
+          .order("id", { ascending: true });
 
         if (error) {
           console.error("Failed to load auth background games:", error.message);
+          setGames([]);
           return;
         }
 
-        setGames(shuffleArray(data ?? []).slice(0, 24));
+        const safeGames = (data ?? []).filter(
+          (game) =>
+            game.id >= 1 &&
+            game.id <= 79 &&
+            game.id !== 6 &&
+            !!game.cover_url
+        );
+
+        setGames(shuffleArray(safeGames).slice(0, 24));
       } catch (error) {
         console.error("Failed to load auth background games:", error);
+        setGames([]);
       }
     }
 
