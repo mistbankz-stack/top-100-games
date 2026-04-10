@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdmin } from "@/lib/supabase/admin";
+import { createSupabasePublicServer } from "@/lib/supabase/public-server";
+import {
+  getClientIp,
+  isValidEmail,
+  normalizeEmail,
+} from "@/lib/server/request";
+import { sweepOldBuckets, tokenBucketLimit } from "@/lib/server/rate-limit";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const supabasePublic = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const runtime = "nodejs";
 
 const MAGIC_LINK_COOLDOWN_MINUTES = 60;
-
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
-
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 function getRedirectTo() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -38,6 +29,32 @@ function getMinutesSince(dateString: string) {
 }
 
 export async function POST(request: NextRequest) {
+  sweepOldBuckets();
+
+  const ip = getClientIp(request);
+
+  // 8 requests per 10 minutes per IP
+  const ipLimit = tokenBucketLimit({
+    key: `magic-link:ip:${ip}`,
+    capacity: 8,
+    refillPerSecond: 8 / 600,
+  });
+
+  if (!ipLimit.ok) {
+    return NextResponse.json(
+      {
+        error: "Too many requests. Please wait a bit before trying again.",
+        code: "RATE_LIMITED",
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(ipLimit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   try {
     const body = await request.json();
     const rawEmail = typeof body.email === "string" ? body.email : "";
@@ -49,6 +66,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const supabaseAdmin = createSupabaseAdmin(request);
 
     const { data: existingBallot, error: ballotError } = await supabaseAdmin
       .from("ballots")
@@ -115,15 +134,14 @@ export async function POST(request: NextRequest) {
 
     const redirectTo = getRedirectTo();
 
-    const { error: signInError, data: signInData } =
-      await supabasePublic.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: redirectTo,
-        },
-      });
+    const supabasePublic = createSupabasePublicServer(request);
 
-    console.log("signInWithOtp result:", { signInData, signInError, redirectTo });
+    const { error: signInError } = await supabasePublic.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: redirectTo,
+      },
+    });
 
     if (signInError) {
       console.error("Failed to send magic link:", signInError);
@@ -157,6 +175,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Unexpected request-magic-link error:", error);
+
     return NextResponse.json(
       {
         error:

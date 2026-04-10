@@ -1,12 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdmin } from "@/lib/supabase/admin";
+import { getClientIp } from "@/lib/server/request";
+import { sweepOldBuckets, tokenBucketLimit } from "@/lib/server/rate-limit";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  sweepOldBuckets();
+
+  const ip = getClientIp(req);
+
+  // 30 checks per 10 minutes per IP
+  const ipLimit = tokenBucketLimit({
+    key: `ballot-status:ip:${ip}`,
+    capacity: 30,
+    refillPerSecond: 30 / 600,
+  });
+
+  if (!ipLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests.", code: "RATE_LIMITED" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(ipLimit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   try {
     const authHeader = req.headers.get("authorization");
 
@@ -18,6 +40,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.replace("Bearer ", "").trim();
+    const supabase = createSupabaseAdmin(req);
 
     const {
       data: { user },

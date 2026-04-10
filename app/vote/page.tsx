@@ -758,44 +758,56 @@ export default function VotePage() {
   }
 
   async function importSelectedIgdbGame(game: IgdbSearchGame) {
-    if (hasVoted) return;
+  if (hasVoted) return;
 
-    setImportLoadingId(game.igdb_id);
-    clearMessages();
+  setImportLoadingId(game.igdb_id);
+  clearMessages();
 
-    try {
-      const response = await fetch("/api/igdb-import", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(game),
-      });
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const data = await response.json();
+    const token = session?.access_token;
 
-      if (!response.ok) {
-        setErrorMessage(data.error || "Failed to import selected game.");
-        return;
-      }
-
-      if (!data.game) {
-        setErrorMessage("Import succeeded, but no game was returned.");
-        return;
-      }
-
-      addGameToRanking(data.game, { imported: true });
-      setFallbackResults([]);
-      setQuery("");
-      setResults([]);
-      resetFallbackState();
-    } catch (error) {
-      console.error("Import error:", error);
-      setErrorMessage("Something went wrong importing the selected game.");
-    } finally {
-      setImportLoadingId(null);
+    if (!token) {
+      setErrorMessage("You must be logged in to add a game from deeper search.");
+      return;
     }
+
+    const response = await fetch("/api/igdb-import", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(game),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setErrorMessage(data.error || "Failed to import selected game.");
+      return;
+    }
+
+    if (!data.game) {
+      setErrorMessage("Import succeeded, but no game was returned.");
+      return;
+    }
+
+    addGameToRanking(data.game, { imported: true });
+    setFallbackResults([]);
+    setQuery("");
+    setResults([]);
+    resetFallbackState();
+  } catch (error) {
+    console.error("Import error:", error);
+    setErrorMessage("Something went wrong importing the selected game.");
+  } finally {
+    setImportLoadingId(null);
   }
+}
 
   async function finalSubmitVote() {
     if (hasVoted) {

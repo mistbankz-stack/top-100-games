@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdmin } from "@/lib/supabase/admin";
+import { getClientIp, normalizeEmail } from "@/lib/server/request";
+import { sweepOldBuckets, tokenBucketLimit } from "@/lib/server/rate-limit";
 
 type SubmitBallotPayload = {
   gameIds: number[];
@@ -7,12 +9,35 @@ type SubmitBallotPayload = {
 
 const TOTAL_GAMES = 10;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  sweepOldBuckets();
+
+  const ip = getClientIp(req);
+
+  // 6 submit attempts per 10 minutes per IP
+  const ipLimit = tokenBucketLimit({
+    key: `submit-ballot:ip:${ip}`,
+    capacity: 6,
+    refillPerSecond: 6 / 600,
+  });
+
+  if (!ipLimit.ok) {
+    return NextResponse.json(
+      {
+        error: "Too many submission attempts. Please wait and try again.",
+        code: "RATE_LIMITED",
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(ipLimit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   try {
     const authHeader = req.headers.get("authorization");
 
@@ -24,6 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.replace("Bearer ", "").trim();
+    const supabase = createSupabaseAdmin(req);
 
     const {
       data: { user },
@@ -34,6 +60,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Invalid or expired session." },
         { status: 401 }
+      );
+    }
+
+    if (!user.email_confirmed_at) {
+      return NextResponse.json(
+        { error: "Email not confirmed." },
+        { status: 403 }
       );
     }
 
@@ -75,7 +108,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const voterEmail = user.email.trim().toLowerCase();
+    const voterEmail = normalizeEmail(user.email);
 
     const { data: existingBallot, error: existingBallotError } = await supabase
       .from("ballots")
@@ -152,7 +185,7 @@ export async function POST(req: NextRequest) {
     const { data: insertedBallot, error: insertError } = await supabase
       .from("ballots")
       .insert(insertPayload)
-      .select("id, voter_email")
+      .select("id, voter_email, submitted_at")
       .single();
 
     if (insertError) {
@@ -163,7 +196,8 @@ export async function POST(req: NextRequest) {
       if (
         message.includes("duplicate") ||
         message.includes("unique") ||
-        message.includes("ballots_voter_email_unique_idx")
+        message.includes("ballots_voter_email_unique_idx") ||
+        (insertError as { code?: string }).code === "23505"
       ) {
         return NextResponse.json(
           { error: "This email has already submitted a ballot." },
@@ -181,6 +215,7 @@ export async function POST(req: NextRequest) {
       success: true,
       ballotId: insertedBallot.id,
       voterEmail: insertedBallot.voter_email,
+      submittedAt: insertedBallot.submitted_at,
     });
   } catch (error) {
     console.error("Submit ballot error:", error);
